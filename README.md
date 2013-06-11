@@ -1,3 +1,3 @@
-Go bindings for libFTDI (http://http://www.intra2net.com/en/developer/libftdi/)
+Go bindings for libFTDI (http://www.intra2net.com/en/developer/libftdi/)
 
-[doc](http://gopkgdoc.appspot.com/pkg/github.com/ziutek/glib)
+[gopkgdoc](http://gopkgdoc.appspot.com/pkg/github.com/ziutek/glib)
