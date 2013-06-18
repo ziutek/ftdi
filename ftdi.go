@@ -1,4 +1,4 @@
-// Go bindings to libFTDI library
+// Go binding for libFTDI library
 // http://http://www.intra2net.com/en/developer/libftdi/
 package ftdi
 
@@ -26,7 +26,7 @@ func (e *Error) Error() string {
 	return e.str
 }
 
-// Device represents fome FTDI device
+// Device represents some FTDI device
 type Device struct {
 	ctx C.struct_ftdi_context
 }
