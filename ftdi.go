@@ -31,15 +31,15 @@ type Device struct {
 	ctx C.struct_ftdi_context
 }
 
-func makeDevice(i Interface) (*Device, error) {
+func makeDevice(p Port) (*Device, error) {
 	d := new(Device)
 	e := C.ftdi_init(&d.ctx)
 	if e < 0 {
 		defer d.deinit()
 		return nil, d.makeError(e)
 	}
-	if i != InterfaceAny {
-		e = C.ftdi_set_interface(&d.ctx, C.enum_ftdi_interface(i))
+	if p != PortAny {
+		e = C.ftdi_set_interface(&d.ctx, C.enum_ftdi_interface(p))
 		defer d.deinit()
 		return nil, d.makeError(e)
 	}
@@ -67,20 +67,20 @@ func (d *Device) Close() error {
 	return d.makeError(e)
 }
 
-type Interface int
+type Port int
 
 const (
-	InterfaceAny Interface = iota
-	InterfaceA
-	InterfaceB
-	InterfaceC
-	InterfaceD
+	PortAny Port = iota
+	PortA
+	PortB
+	PortC
+	PortD
 )
 
 // OpenFirst opens the first device with a given vendor and product ids. Uses
 // specified interface.
-func OpenFirst(vendor, product int, i Interface) (*Device, error) {
-	d, err := makeDevice(i)
+func OpenFirst(vendor, product int, p Port) (*Device, error) {
+	d, err := makeDevice(p)
 	if err != nil {
 		return nil, err
 	}
@@ -94,10 +94,10 @@ func OpenFirst(vendor, product int, i Interface) (*Device, error) {
 
 // Open opens the index-th device with a given vendor id, product id,
 // description and serial. Uses specified interface.
-func Open(vendor, product int, description, serial string, index uint,
-	i Interface) (*Device, error) {
+func Open(vendor, product int, description, serial string, index uint, p Port) (
+	*Device, error) {
 
-	d, err := makeDevice(i)
+	d, err := makeDevice(p)
 	if err != nil {
 		return nil, err
 	}
@@ -120,21 +120,21 @@ func Open(vendor, product int, description, serial string, index uint,
 	return d, nil
 }
 
-type Bitmode byte
+type Mode byte
 
 const (
-	BitmodeReset Bitmode = iota
-	BitmodeBitbang
-	BitmodeMPSSE
-	BitmodeSyncBB
-	BitmodeMCU
-	BitmodeOpto
-	BitmodeCBUS
-	BitmodeSyncFF
-	BitmodeFT1284
+	ModeReset Mode = iota
+	ModeBitbang
+	ModeMPSSE
+	ModeSyncBB
+	ModeMCU
+	ModeOpto
+	ModeCBUS
+	ModeSyncFF
+	ModeFT1284
 )
 
-func (d *Device) SetBitmode(iomask byte, mode Bitmode) error {
+func (d *Device) SetBitmode(iomask byte, mode Mode) error {
 	e := C.ftdi_set_bitmode(&d.ctx, C.uchar(iomask), C.uchar(mode))
 	return d.makeError(e)
 }
@@ -151,9 +151,18 @@ func (d *Device) Write(buf []byte) (int, error) {
 	return int(n), nil
 }
 
+func (d *Device) WriteByte(b byte) error {
+	n := C.ftdi_write_data(&d.ctx, (*C.uchar)(&b), 1)
+	if n != 1 {
+		return d.makeError(n)
+	}
+	return nil
+}
 
-func (d *Devic) ReadEEPROM(buf []byte)  {
+func (d *Device) SetBaudrate(br int) error {
+	return d.makeError(C.ftdi_set_baudrate(&d.ctx, C.int(br)))
+}
+
+func (d *Device) ReadEEPROM(buf []byte) {
 
 }
-}
-
