@@ -150,3 +150,10 @@ func (d *Device) Write(buf []byte) (int, error) {
 	}
 	return int(n), nil
 }
+
+
+func (d *Devic) ReadEEPROM(buf []byte)  {
+
+}
+}
+
