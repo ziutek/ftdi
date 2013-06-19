@@ -1,0 +1,403 @@
+package ftdi
+
+/*
+#include <ftdi.h>
+*/
+import "C"
+import "fmt"
+
+type EEPROM struct {
+	d *Device
+}
+
+func (e EEPROM) makeError(code C.int) error {
+	if code == 0 {
+		return nil
+	}
+	return &Error{
+		code: int(code),
+		str:  C.GoString(C.ftdi_get_error_string(e.d.ctx)),
+	}
+}
+
+func (e EEPROM) Read() error {
+	return e.makeError(C.ftdi_read_eeprom(e.d.ctx))
+}
+
+func (e EEPROM) Decode() error {
+	return e.makeError(C.ftdi_eeprom_decode(e.d.ctx, 0))
+}
+
+func (e EEPROM) VendorId() uint16 {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.VENDOR_ID, &v)
+	return uint16(v)
+}
+
+func (e EEPROM) ProductId() uint16 {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.PRODUCT_ID, &v)
+	return uint16(v)
+}
+
+func (e EEPROM) ReleaseNumber() uint16 {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.RELEASE_NUMBER, &v)
+	return uint16(v)
+}
+
+func (e EEPROM) SelfPowered() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.SELF_POWERED, &v)
+	return v != 0
+}
+
+func (e EEPROM) RemoteWakeup() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.REMOTE_WAKEUP, &v)
+	return v != 0
+}
+
+func (e EEPROM) IsNotPNP() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.IS_NOT_PNP, &v)
+	return v != 0
+}
+
+func (e EEPROM) SuspendDBus7() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.SUSPEND_DBUS7, &v)
+	return v != 0
+}
+
+func (e EEPROM) IsochronousInp() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.IN_IS_ISOCHRONOUS, &v)
+	return v != 0
+}
+
+func (e EEPROM) IsochronousOut() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.OUT_IS_ISOCHRONOUS, &v)
+	return v != 0
+}
+
+func (e EEPROM) SuspendPullDowns() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.SUSPEND_PULL_DOWNS, &v)
+	return v != 0
+}
+
+func (e EEPROM) UseSerial() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.USE_SERIAL, &v)
+	return v != 0
+}
+
+func (e EEPROM) USBVersion() uint16 {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.USB_VERSION, &v)
+	return uint16(v)
+}
+
+func (e EEPROM) UseUSBVersion() bool {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.USE_USB_VERSION, &v)
+	return v != 0
+}
+
+// MaxPower returns maximum power consumption from USB in mA
+func (e EEPROM) MaxPower() uint16 {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.MAX_POWER, &v)
+	return uint16(v)
+}
+
+func (e EEPROM) channelValue(names []C.enum_ftdi_eeprom_value, c Channel) (
+	v C.int) {
+	n := int(c - ChannelA)
+	if n < 0 || n >= len(names) {
+		panic("bad channel")
+	}
+	C.ftdi_get_eeprom_value(e.d.ctx, C.CHANNEL_A_TYPE, &v)
+	return
+}
+
+type ChannelType byte
+
+const (
+	ChannelUART ChannelType = iota
+	ChannelFIFO
+	ChannelOPTO
+	ChannelCPU
+	ChannelFT1284
+)
+
+var channelTypes = []string{"UART", "FIFO", "OPTO", "CPU", "FT1284"}
+
+func (ct ChannelType) String() string {
+	if ct > ChannelFT1284 {
+		return "unknown"
+	}
+	return channelTypes[ct]
+}
+
+var channelType = []C.enum_ftdi_eeprom_value{
+	C.CHANNEL_A_TYPE,
+	C.CHANNEL_B_TYPE,
+}
+
+// ChannelType returns type of c channel. c can be: ChannelA, ChannelB
+func (e EEPROM) ChannelType(c Channel) ChannelType {
+	return ChannelType(e.channelValue(channelType, c))
+}
+
+var channelDriver = []C.enum_ftdi_eeprom_value{
+	C.CHANNEL_A_DRIVER,
+	C.CHANNEL_B_DRIVER,
+	C.CHANNEL_C_DRIVER,
+	C.CHANNEL_B_DRIVER,
+}
+
+// ChannelDriver returns true if c channel has a driver.
+// c can be from range: ChannelA - ChannelD
+func (e EEPROM) ChannelDriver(c Channel) bool {
+	return e.channelValue(channelDriver, c) != 0
+}
+
+var channelRS485 = []C.enum_ftdi_eeprom_value{
+	C.CHANNEL_A_RS485,
+	C.CHANNEL_B_RS485,
+	C.CHANNEL_C_RS485,
+	C.CHANNEL_D_RS485,
+}
+
+// ChannelDriver returns true if c is RS485 channel.
+// c can be from range: ChannelA - ChannelD
+func (e EEPROM) ChannelRS485(c Channel) bool {
+	return e.channelValue(channelRS485, c) != 0
+}
+
+var highCurrent = []C.enum_ftdi_eeprom_value{
+	C.HIGH_CURRENT,
+	C.HIGH_CURRENT_A,
+	C.HIGH_CURRENT_B,
+}
+
+// ChannelDriver returns true if c channel is in high current mode .
+// c can be from range: ChannAny - ChannelD (use ChannAny for TypeR device).
+func (e EEPROM) HighCurrent(c Channel) bool {
+	return e.channelValue(highCurrent, c+ChannelA) != 0
+}
+
+type CBusFunction byte
+
+const (
+	CBusTxEn CBusFunction = iota
+	CBusPwrEn
+	CBusRxLED
+	CBusTxLED
+	CBusTxRxLED
+	CBusSleep
+	CBusClk48
+	CBusClk24
+	CBusClk12
+	CBusClk6
+	CBusIOMode
+	CBusBBWR
+	CBusBBRD
+)
+
+var cbusFunctions = []string{
+	"TxD enabled",
+	"power enabled",
+	"Rx LED",
+	"Tx LED",
+	"Tx/Rx LED",
+	"sleep",
+	"clock 48kHz",
+	"clock 24kHz",
+	"clock 12kHz",
+	"clock 6kHz",
+	"bitbang rd/wr",
+	"bitbang write",
+	"bitbang read",
+}
+
+func (c CBusFunction) String() string {
+	if c > CBusBBRD {
+		return "unknown"
+	}
+	return cbusFunctions[c]
+}
+
+var cbusFunction = []C.enum_ftdi_eeprom_value{
+	C.CBUS_FUNCTION_0,
+	C.CBUS_FUNCTION_1,
+	C.CBUS_FUNCTION_2,
+	C.CBUS_FUNCTION_3,
+	C.CBUS_FUNCTION_4,
+	C.CBUS_FUNCTION_5,
+	C.CBUS_FUNCTION_6,
+	C.CBUS_FUNCTION_7,
+	C.CBUS_FUNCTION_8,
+	C.CBUS_FUNCTION_9,
+}
+
+func (e EEPROM) CBusFunction(n int) CBusFunction {
+	if n < 0 || n >= len(cbusFunction) {
+		panic("bad CBUS number")
+	}
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, cbusFunction[n], &v)
+	return CBusFunction(v)
+}
+
+func (e EEPROM) Invert() uint32 {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.INVERT, &v)
+	return uint32(v)
+}
+
+/*
+   case GROUP0_DRIVE:
+       *value = ftdi->eeprom->group0_drive;
+       break;
+   case GROUP0_SCHMITT:
+       *value = ftdi->eeprom->group0_schmitt;
+       break;
+   case GROUP0_SLEW:
+       *value = ftdi->eeprom->group0_slew;
+       break;
+   case GROUP1_DRIVE:
+       *value = ftdi->eeprom->group1_drive;
+       break;
+   case GROUP1_SCHMITT:
+       *value = ftdi->eeprom->group1_schmitt;
+       break;
+   case GROUP1_SLEW:
+       *value = ftdi->eeprom->group1_slew;
+       break;
+   case GROUP2_DRIVE:
+       *value = ftdi->eeprom->group2_drive;
+       break;
+   case GROUP2_SCHMITT:
+       *value = ftdi->eeprom->group2_schmitt;
+       break;
+   case GROUP2_SLEW:
+       *value = ftdi->eeprom->group2_slew;
+       break;
+   case GROUP3_DRIVE:
+       *value = ftdi->eeprom->group3_drive;
+       break;
+   case GROUP3_SCHMITT:
+       *value = ftdi->eeprom->group3_schmitt;
+       break;
+   case GROUP3_SLEW:
+       *value = ftdi->eeprom->group3_slew;
+       break;
+   case POWER_SAVE:
+       *value = ftdi->eeprom->powersave;
+       break;
+   case CLOCK_POLARITY:
+       *value = ftdi->eeprom->clock_polarity;
+       break;
+   case DATA_ORDER:
+       *value = ftdi->eeprom->data_order;
+       break;
+   case FLOW_CONTROL:
+       *value = ftdi->eeprom->flow_control;
+       break;
+*/
+
+func (e EEPROM) ChipType() byte {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.CHIP_TYPE, &v)
+	return byte(v)
+}
+
+func (e EEPROM) ChipSize() int {
+	var v C.int
+	C.ftdi_get_eeprom_value(e.d.ctx, C.CHIP_SIZE, &v)
+	return int(v)
+}
+
+func (e EEPROM) String() string {
+	return fmt.Sprintf(""+
+		"vendor id:          %04xh\n"+
+		"product id:         %04xh\n"+
+		"release number:     %04xh\n"+
+		"self powered:       %t\n"+
+		"remote wakeup:      %t\n"+
+		"is not PNP:         %t\n"+
+		"isochronous inp:    %t\n"+
+		"isochronous out:    %t\n"+
+		"suspend pull downs: %t\n"+
+		"use serial:         %t\n"+
+		"USB version:        %04xh\n"+
+		"use USB version:    %t\n"+
+		"USB max. current:   %d mA\n"+
+		"channel A type:     %s\n"+
+		"channel B type:     %s\n"+
+		"channel A driver:   %t\n"+
+		"channel B driver:   %t\n"+
+		"channel C driver:   %t\n"+
+		"channel D driver:   %t\n"+
+		"channel A RS485:    %t\n"+
+		"channel B RS485:    %t\n"+
+		"channel C RS485:    %t\n"+
+		"channel D RS485:    %t\n"+
+		"high current:       %t\n"+
+		"high current A:     %t\n"+
+		"high current B:     %t\n"+
+		"CBUS[0]:            %s\n"+
+		"CBUS[1]:            %s\n"+
+		"CBUS[2]:            %s\n"+
+		"CBUS[3]:            %s\n"+
+		"CBUS[4]:            %s\n"+
+		"CBUS[5]:            %s\n"+
+		"CBUS[6]:            %s\n"+
+		"CBUS[7]:            %s\n"+
+		"CBUS[8]:            %s\n"+
+		"CBUS[9]:            %s\n"+
+		"invert:             %010bb\n"+
+		"",
+		e.VendorId(),
+		e.ProductId(),
+		e.ReleaseNumber(),
+		e.SelfPowered(),
+		e.RemoteWakeup(),
+		e.IsNotPNP(),
+		e.IsochronousInp(),
+		e.IsochronousOut(),
+		e.SuspendPullDowns(),
+		e.UseSerial(),
+		e.USBVersion(),
+		e.UseUSBVersion(),
+		e.MaxPower(),
+		e.ChannelType(ChannelA),
+		e.ChannelType(ChannelB),
+		e.ChannelDriver(ChannelA),
+		e.ChannelDriver(ChannelB),
+		e.ChannelDriver(ChannelC),
+		e.ChannelDriver(ChannelD),
+		e.ChannelRS485(ChannelA),
+		e.ChannelRS485(ChannelB),
+		e.ChannelRS485(ChannelC),
+		e.ChannelRS485(ChannelD),
+		e.HighCurrent(ChannelAny),
+		e.HighCurrent(ChannelA),
+		e.HighCurrent(ChannelB),
+		e.CBusFunction(0),
+		e.CBusFunction(1),
+		e.CBusFunction(2),
+		e.CBusFunction(3),
+		e.CBusFunction(4),
+		e.CBusFunction(5),
+		e.CBusFunction(6),
+		e.CBusFunction(7),
+		e.CBusFunction(8),
+		e.CBusFunction(9),
+		e.Invert(),
+	)
+}

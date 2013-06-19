@@ -13,7 +13,7 @@ func checkErr(err error) {
 }
 
 func main() {
-	d, err := ftdi.OpenFirst(0x0403, 0x6001, ftdi.PortAny)
+	d, err := ftdi.OpenFirst(0x0403, 0x6001, ftdi.ChannelAny)
 	checkErr(err)
 	defer d.Close()
 
