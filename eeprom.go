@@ -6,12 +6,19 @@ package ftdi
 import "C"
 import "fmt"
 
+func cbool(b bool) C.int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 type EEPROM struct {
 	d *Device
 }
 
 func (e EEPROM) makeError(code C.int) error {
-	if code == 0 {
+	if code >= 0 {
 		return nil
 	}
 	return &Error{
@@ -24,8 +31,16 @@ func (e EEPROM) Read() error {
 	return e.makeError(C.ftdi_read_eeprom(e.d.ctx))
 }
 
+func (e EEPROM) Write() error {
+	return e.makeError(C.ftdi_write_eeprom(e.d.ctx))
+}
+
 func (e EEPROM) Decode() error {
 	return e.makeError(C.ftdi_eeprom_decode(e.d.ctx, 0))
+}
+
+func (e EEPROM) Build() error {
+	return e.makeError(C.ftdi_eeprom_build(e.d.ctx))
 }
 
 func (e EEPROM) VendorId() uint16 {
@@ -34,10 +49,18 @@ func (e EEPROM) VendorId() uint16 {
 	return uint16(v)
 }
 
+func (e EEPROM) SetVendorId(v uint16) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.VENDOR_ID, C.int(v))
+}
+
 func (e EEPROM) ProductId() uint16 {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.PRODUCT_ID, &v)
 	return uint16(v)
+}
+
+func (e EEPROM) SetProductId(v uint16) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.PRODUCT_ID, C.int(v))
 }
 
 func (e EEPROM) ReleaseNumber() uint16 {
@@ -46,10 +69,18 @@ func (e EEPROM) ReleaseNumber() uint16 {
 	return uint16(v)
 }
 
+func (e EEPROM) SetReleaseNumber(v uint16) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.RELEASE_NUMBER, C.int(v))
+}
+
 func (e EEPROM) SelfPowered() bool {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.SELF_POWERED, &v)
 	return v != 0
+}
+
+func (e EEPROM) SetSelfPowered(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.SELF_POWERED, cbool(v))
 }
 
 func (e EEPROM) RemoteWakeup() bool {
@@ -58,10 +89,18 @@ func (e EEPROM) RemoteWakeup() bool {
 	return v != 0
 }
 
+func (e EEPROM) SetRemoteWakeup(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.REMOTE_WAKEUP, cbool(v))
+}
+
 func (e EEPROM) IsNotPNP() bool {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.IS_NOT_PNP, &v)
 	return v != 0
+}
+
+func (e EEPROM) SetIsNotPNP(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.IS_NOT_PNP, cbool(v))
 }
 
 func (e EEPROM) SuspendDBus7() bool {
@@ -70,10 +109,18 @@ func (e EEPROM) SuspendDBus7() bool {
 	return v != 0
 }
 
+func (e EEPROM) SetSuspendDBus7(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.SUSPEND_DBUS7, cbool(v))
+}
+
 func (e EEPROM) IsochronousInp() bool {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.IN_IS_ISOCHRONOUS, &v)
 	return v != 0
+}
+
+func (e EEPROM) SetIsochronousInp(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.IN_IS_ISOCHRONOUS, cbool(v))
 }
 
 func (e EEPROM) IsochronousOut() bool {
@@ -82,10 +129,18 @@ func (e EEPROM) IsochronousOut() bool {
 	return v != 0
 }
 
+func (e EEPROM) SetIsochronousOut(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.OUT_IS_ISOCHRONOUS, cbool(v))
+}
+
 func (e EEPROM) SuspendPullDowns() bool {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.SUSPEND_PULL_DOWNS, &v)
 	return v != 0
+}
+
+func (e EEPROM) SetSuspendPullDowns(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.SUSPEND_PULL_DOWNS, cbool(v))
 }
 
 func (e EEPROM) UseSerial() bool {
@@ -94,10 +149,18 @@ func (e EEPROM) UseSerial() bool {
 	return v != 0
 }
 
+func (e EEPROM) SetUseSerial(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.USE_SERIAL, cbool(v))
+}
+
 func (e EEPROM) USBVersion() uint16 {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.USB_VERSION, &v)
 	return uint16(v)
+}
+
+func (e EEPROM) SetUSBVersion(v uint16) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.USB_VERSION, C.int(v))
 }
 
 func (e EEPROM) UseUSBVersion() bool {
@@ -106,11 +169,20 @@ func (e EEPROM) UseUSBVersion() bool {
 	return v != 0
 }
 
-// MaxPower returns maximum power consumption from USB in mA
-func (e EEPROM) MaxPower() uint16 {
+func (e EEPROM) SetUseUSBVersion(v bool) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.USE_USB_VERSION, cbool(v))
+}
+
+// MaxPower returns maximum power consumption (max. current) from USB in mA
+func (e EEPROM) MaxPower() int {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.MAX_POWER, &v)
-	return uint16(v)
+	return int(v)
+}
+
+// SetMaxPower sets maximum power consumption (max. current) from USB in mA
+func (e EEPROM) SetMaxPower(v int) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.MAX_POWER, C.int(v))
 }
 
 func (e EEPROM) channelValue(names []C.enum_ftdi_eeprom_value, c Channel) (
@@ -119,8 +191,18 @@ func (e EEPROM) channelValue(names []C.enum_ftdi_eeprom_value, c Channel) (
 	if n < 0 || n >= len(names) {
 		panic("bad channel")
 	}
-	C.ftdi_get_eeprom_value(e.d.ctx, C.CHANNEL_A_TYPE, &v)
+	C.ftdi_get_eeprom_value(e.d.ctx, names[n], &v)
 	return
+}
+
+func (e EEPROM) setChannelValue(names []C.enum_ftdi_eeprom_value, c Channel,
+	v C.int) {
+
+	n := int(c - ChannelA)
+	if n < 0 || n >= len(names) {
+		panic("bad channel")
+	}
+	C.ftdi_set_eeprom_value(e.d.ctx, names[n], v)
 }
 
 type ChannelType byte
@@ -152,6 +234,10 @@ func (e EEPROM) ChannelType(c Channel) ChannelType {
 	return ChannelType(e.channelValue(channelType, c))
 }
 
+func (e EEPROM) SetChannelType(c Channel, v ChannelType) {
+	e.setChannelValue(channelType, c, C.int(v))
+}
+
 var channelDriver = []C.enum_ftdi_eeprom_value{
 	C.CHANNEL_A_DRIVER,
 	C.CHANNEL_B_DRIVER,
@@ -163,6 +249,10 @@ var channelDriver = []C.enum_ftdi_eeprom_value{
 // c can be from range: ChannelA - ChannelD
 func (e EEPROM) ChannelDriver(c Channel) bool {
 	return e.channelValue(channelDriver, c) != 0
+}
+
+func (e EEPROM) SetChannelDriver(c Channel, v bool) {
+	e.setChannelValue(channelDriver, c, cbool(v))
 }
 
 var channelRS485 = []C.enum_ftdi_eeprom_value{
@@ -178,6 +268,10 @@ func (e EEPROM) ChannelRS485(c Channel) bool {
 	return e.channelValue(channelRS485, c) != 0
 }
 
+func (e EEPROM) SetChannelRS485(c Channel, v bool) {
+	e.setChannelValue(channelRS485, c, cbool(v))
+}
+
 var highCurrent = []C.enum_ftdi_eeprom_value{
 	C.HIGH_CURRENT,
 	C.HIGH_CURRENT_A,
@@ -188,6 +282,10 @@ var highCurrent = []C.enum_ftdi_eeprom_value{
 // c can be from range: ChannAny - ChannelD (use ChannAny for TypeR device).
 func (e EEPROM) HighCurrent(c Channel) bool {
 	return e.channelValue(highCurrent, c+ChannelA) != 0
+}
+
+func (e EEPROM) SetHighCurrent(c Channel, v bool) {
+	e.setChannelValue(highCurrent, c, cbool(v))
 }
 
 type CBusFunction byte
@@ -215,11 +313,11 @@ var cbusFunctions = []string{
 	"Tx LED",
 	"Tx/Rx LED",
 	"sleep",
-	"clock 48kHz",
-	"clock 24kHz",
-	"clock 12kHz",
-	"clock 6kHz",
-	"bitbang rd/wr",
+	"clock 48 MHz",
+	"clock 24 MHz",
+	"clock 12 MHz",
+	"clock 6 MHz",
+	"bitbang I/O",
 	"bitbang write",
 	"bitbang read",
 }
@@ -253,13 +351,25 @@ func (e EEPROM) CBusFunction(n int) CBusFunction {
 	return CBusFunction(v)
 }
 
-func (e EEPROM) Invert() uint32 {
+func (e EEPROM) SetCBusFunction(n int, v CBusFunction) {
+	if n < 0 || n >= len(cbusFunction) {
+		panic("bad CBUS number")
+	}
+	C.ftdi_set_eeprom_value(e.d.ctx, cbusFunction[n], C.int(v))
+}
+
+func (e EEPROM) Invert() int {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.INVERT, &v)
-	return uint32(v)
+	return int(v)
+}
+
+func (e EEPROM) SetInvert(v int) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.INVERT, C.int(v))
 }
 
 /*
+	TODO:
    case GROUP0_DRIVE:
        *value = ftdi->eeprom->group0_drive;
        break;
@@ -314,6 +424,10 @@ func (e EEPROM) ChipType() byte {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.CHIP_TYPE, &v)
 	return byte(v)
+}
+
+func (e EEPROM) SetChipType(v byte) {
+	C.ftdi_set_eeprom_value(e.d.ctx, C.CHIP_TYPE, C.int(v))
 }
 
 func (e EEPROM) ChipSize() int {

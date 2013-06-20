@@ -67,7 +67,7 @@ func (d *Device) deinit() {
 }
 
 func (d *Device) makeError(code C.int) error {
-	if code == 0 {
+	if code >= 0 {
 		return nil
 	}
 	return &Error{

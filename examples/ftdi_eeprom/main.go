@@ -22,4 +22,33 @@ func main() {
 	checkErr(e.Read())
 	checkErr(e.Decode())
 	fmt.Println(e)
+
+	modified := false
+
+	invert := 0x15
+	if e.Invert() != invert {
+		e.SetInvert(invert)
+		modified = true
+	}
+	maxCurrent := 200 //mA
+	if e.MaxPower() != maxCurrent {
+		e.SetMaxPower(maxCurrent)
+		modified = true
+	}
+	cbusFunction := ftdi.CBusIOMode
+	for n := 0; n < 4; n++ {
+		if e.CBusFunction(n) != cbusFunction {
+			e.SetCBusFunction(n, cbusFunction)
+			modified = true
+		}
+	}
+
+	if modified {
+		checkErr(e.Build())
+		checkErr(e.Write())
+
+		checkErr(e.Read())
+		checkErr(e.Decode())
+		fmt.Println(e)
+	}
 }
