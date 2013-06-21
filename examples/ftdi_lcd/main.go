@@ -10,8 +10,8 @@ package main
 
 import (
 	"github.com/ziutek/ftdi"
+	"github.com/ziutek/lcd/hd44780"
 	"log"
-	"time"
 )
 
 func checkErr(err error) {
@@ -20,11 +20,11 @@ func checkErr(err error) {
 	}
 }
 
-const (
-	E  = 1 << 4
-	RW = 1 << 5
-	RS = 1 << 6
-)
+func main() {
+	d, err := ftdi.OpenFirst(0x0403, 0x6001, ftdi.ChannelAny)
+	checkErr(err)
+	defer d.Close()
+	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
 
-// Base period 30 ns:
-const baudrate = 
+	lcd := hd44780.New(d, 4, 20)
+}
