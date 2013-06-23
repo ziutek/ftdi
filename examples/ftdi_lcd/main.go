@@ -10,7 +10,7 @@ package main
 
 import (
 	"github.com/ziutek/ftdi"
-	"github.com/ziutek/lcd/hd44780"
+	"github.com/ziutek/lcd/hdc"
 	"log"
 )
 
@@ -25,6 +25,11 @@ func main() {
 	checkErr(err)
 	defer d.Close()
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
+	checkErr(d.SetBaudrate(183))
 
-	lcd := hd44780.New(d, 4, 20)
+	lcd := hdc.NewDriver(hdc.NewBitbangOut(d), 4, 20)
+	checkErr(lcd.Reset())
+	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
+	checkErr(lcd.WriteByte('A'))
+	checkErr(lcd.Flush())
 }
