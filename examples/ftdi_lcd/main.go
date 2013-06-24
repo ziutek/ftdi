@@ -28,8 +28,25 @@ func main() {
 	checkErr(d.SetBaudrate(183))
 
 	lcd := hdc.NewDriver(hdc.NewBitbangOut(d), 4, 20)
-	checkErr(lcd.Reset())
+	checkErr(lcd.Init())
 	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
-	checkErr(lcd.WriteByte('A'))
+	checkErr(lcd.Flush())
+	checkErr(lcd.SetDDRAMAddr(0x00))
+	for i := byte(0); i < 20; i++ {
+		checkErr(lcd.WriteByte('0'))
+	}
+	checkErr(lcd.SetDDRAMAddr(0x40))
+	for i := byte(0); i < 20; i++ {
+		checkErr(lcd.WriteByte('1'))
+	}
+	checkErr(lcd.SetDDRAMAddr(0x14))
+	for i := byte(0); i < 20; i++ {
+		checkErr(lcd.WriteByte('2'))
+	}
+	checkErr(lcd.SetDDRAMAddr(0x54))
+	for i := byte(0); i < 20; i++ {
+		checkErr(lcd.WriteByte('3'))
+	}
+
 	checkErr(lcd.Flush())
 }
