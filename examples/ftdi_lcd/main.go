@@ -25,28 +25,28 @@ func main() {
 	checkErr(err)
 	defer d.Close()
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
-	checkErr(d.SetBaudrate(183))
+	// Set output speed in bytes per second. For communication with
+	// HD44780 in 4-bit mode there are two bytes send for one 4-bit
+	// nibble (first with E bit set, second with E bit unset).
+	boudrate := 1024 // bytes/s
+	checkErr(d.SetBaudrate(boudrate / 16))
 
-	lcd := hdc.NewDriver(hdc.NewBitbangOut(d), 4, 20)
+	lcd := hdc.NewDriver(hdc.NewBitbang(d), 4, 20)
 	checkErr(lcd.Init())
 	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
 	checkErr(lcd.Flush())
-	checkErr(lcd.SetDDRAMAddr(0x00))
+
 	for i := byte(0); i < 20; i++ {
 		checkErr(lcd.WriteByte('0'))
 	}
-	checkErr(lcd.SetDDRAMAddr(0x40))
 	for i := byte(0); i < 20; i++ {
 		checkErr(lcd.WriteByte('1'))
 	}
-	checkErr(lcd.SetDDRAMAddr(0x14))
 	for i := byte(0); i < 20; i++ {
 		checkErr(lcd.WriteByte('2'))
 	}
-	checkErr(lcd.SetDDRAMAddr(0x54))
 	for i := byte(0); i < 20; i++ {
 		checkErr(lcd.WriteByte('3'))
 	}
-
 	checkErr(lcd.Flush())
 }
