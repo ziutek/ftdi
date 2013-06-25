@@ -28,8 +28,9 @@ func main() {
 	defer d.Close()
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
 
-	baudrate := 800
-	fmt.Println("Setting baudrate to %d B/s", baudrate)
+	baudrate := 4194304 // 2^24 - works well with FT232R)
+	//baudrate = 1024
+	fmt.Printf("Setting baudrate to %d B/s\n", baudrate)
 	checkErr(d.SetBaudrate(baudrate / 16))
 
 	lcd := hdc.NewDevice(hdc.NewBitbang(d), 4, 20)
@@ -38,10 +39,10 @@ func main() {
 
 	buf := make([]byte, 80)
 	for i := 0; i < 20; i++ {
-		buf[i] = 0
-		buf[i+20] = 1
-		buf[i+40] = 2
-		buf[i+60] = 3
+		buf[i] = '0'
+		buf[i+20] = '2'
+		buf[i+40] = '1'
+		buf[i+60] = '3'
 	}
 	_, err = lcd.Write(buf)
 	checkErr(err)
