@@ -13,6 +13,7 @@ import (
 	"github.com/ziutek/ftdi"
 	"github.com/ziutek/lcd/hdc"
 	"os"
+	"time"
 )
 
 func checkErr(err error) {
@@ -37,13 +38,33 @@ func main() {
 	checkErr(lcd.Init())
 	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
 
-	buf := make([]byte, 80)
+	buf1 := make([]byte, 80)
 	for i := 0; i < 20; i++ {
-		buf[i] = '0'
-		buf[i+20] = '2'
-		buf[i+40] = '1'
-		buf[i+60] = '3'
+		buf1[i] = '0'
+		buf1[i+20] = '2'
+		buf1[i+40] = '1'
+		buf1[i+60] = '3'
 	}
-	_, err = lcd.Write(buf)
-	checkErr(err)
+	buf2 := make([]byte, 80)
+	for i := 0; i < 80; i++ {
+		buf2[i] = ' '
+	}
+	n := 20
+	t := time.Now()
+	for i := 0; i < n; i++ {
+		_, err = lcd.Write(buf2)
+		checkErr(err)
+		_, err = lcd.Write(buf1)
+		checkErr(err)
+	}
+	fmt.Printf(
+		"%d FPS\n",
+		time.Duration(2*n)*time.Second/time.Now().Sub(t),
+	)
+	
+	for i := 0; i < 4; i++ {
+		for i := 0; i < 20; i++ {
+
+		}
+	}
 }
