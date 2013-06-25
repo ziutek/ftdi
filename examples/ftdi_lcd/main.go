@@ -31,22 +31,12 @@ func main() {
 	boudrate := 1024 // bytes/s
 	checkErr(d.SetBaudrate(boudrate / 16))
 
-	lcd := hdc.NewDriver(hdc.NewBitbang(d), 4, 20)
+	lcd := hdc.NewDevice(hdc.NewBitbang(d), 4, 20)
 	checkErr(lcd.Init())
 	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
-	checkErr(lcd.Flush())
 
-	for i := byte(0); i < 20; i++ {
-		checkErr(lcd.WriteByte('0'))
+	checkErr(lcd.Write([]byte{
+	'1','1','1','1','1','1','1'i,'1','1','1','1','1','1','1'
+	}))
 	}
-	for i := byte(0); i < 20; i++ {
-		checkErr(lcd.WriteByte('1'))
-	}
-	for i := byte(0); i < 20; i++ {
-		checkErr(lcd.WriteByte('2'))
-	}
-	for i := byte(0); i < 20; i++ {
-		checkErr(lcd.WriteByte('3'))
-	}
-	checkErr(lcd.Flush())
 }
