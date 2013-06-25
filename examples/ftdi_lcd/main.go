@@ -9,14 +9,16 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ziutek/ftdi"
 	"github.com/ziutek/lcd/hdc"
-	"log"
+	"os"
 )
 
 func checkErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -25,18 +27,32 @@ func main() {
 	checkErr(err)
 	defer d.Close()
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
-	// Set output speed in bytes per second. For communication with
-	// HD44780 in 4-bit mode there are two bytes send for one 4-bit
-	// nibble (first with E bit set, second with E bit unset).
-	boudrate := 1024 // bytes/s
-	checkErr(d.SetBaudrate(boudrate / 16))
+
+	// Set output bitbang speed in bytes per second.
+	//
+	// hdc.Bitbang sends 3 bytes for one 4-bit nibble:
+	// 1. with E bit unset, need >= 140 ns
+	// 2. with E bit set,   need >= 450 ns
+	// 3. with E bit unset, need >= 10 ns
+	// Full E cycle time >= 1000 ns
+	// We can specify fixed baudrate so we use longest time satisfy all time
+	// constrains: 495 ns.
+	baudrate := int(1e9) / 495 // bytes/s
+	baudrate = 1024
+	fmt.Println("Setting baudrate to %d B/s", baudrate)
+	checkErr(d.SetBaudrate(baudrate / 16))
 
 	lcd := hdc.NewDevice(hdc.NewBitbang(d), 4, 20)
 	checkErr(lcd.Init())
 	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
 
-	checkErr(lcd.Write([]byte{
-	'1','1','1','1','1','1','1'i,'1','1','1','1','1','1','1'
-	}))
+	buf := make([]byte, 80)
+	for i := 0; i < 20; i++ {
+		buf[i] = 0
+		buf[i+20] = 1
+		buf[i+40] = 2
+		buf[i+60] = 3
 	}
+	_, err = lcd.Write(buf)
+	checkErr(err)
 }
