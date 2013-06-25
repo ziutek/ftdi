@@ -28,17 +28,7 @@ func main() {
 	defer d.Close()
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
 
-	// Set output bitbang speed in bytes per second.
-	//
-	// hdc.Bitbang sends 3 bytes for one 4-bit nibble:
-	// 1. with E bit unset, need >= 140 ns
-	// 2. with E bit set,   need >= 450 ns
-	// 3. with E bit unset, need >= 10 ns
-	// Full E cycle time >= 1000 ns
-	// We can specify fixed baudrate so we use longest time satisfy all time
-	// constrains: 495 ns.
-	baudrate := int(1e9) / 495 // bytes/s
-	baudrate = 1024
+	baudrate := 800
 	fmt.Println("Setting baudrate to %d B/s", baudrate)
 	checkErr(d.SetBaudrate(baudrate / 16))
 
