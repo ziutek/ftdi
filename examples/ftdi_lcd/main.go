@@ -29,8 +29,7 @@ func main() {
 	defer d.Close()
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
 
-	baudrate := 4194304 // 2^24 - works well with FT232R)
-	//baudrate = 1024
+	baudrate := 1 << 18 // B/s (good value for JHD204A)
 	fmt.Printf("Setting baudrate to %d B/s\n", baudrate)
 	checkErr(d.SetBaudrate(baudrate / 16))
 
@@ -58,10 +57,10 @@ func main() {
 		checkErr(err)
 	}
 	fmt.Printf(
-		"%d FPS\n",
-		time.Duration(2*n)*time.Second/time.Now().Sub(t),
+		"%.2f FPS\n",
+		float64(2*n)*float64(time.Second)/float64(time.Now().Sub(t)),
 	)
-	
+
 	for i := 0; i < 4; i++ {
 		for i := 0; i < 20; i++ {
 

@@ -156,6 +156,31 @@ func (d *Device) SetBitmode(iomask byte, mode Mode) error {
 	return d.makeError(e)
 }
 
+func (d *Device) Reset() error {
+	return d.makeError(C.ftdi_usb_reset(d.ctx))
+}
+
+func (d *Device) PurgeRxBuffer() error {
+	return d.makeError(C.ftdi_usb_purge_rx_buffer(d.ctx))
+}
+
+func (d *Device) PurgeTxBuffer() error {
+	return d.makeError(C.ftdi_usb_purge_tx_buffer(d.ctx))
+}
+
+func (d *Device) PurgeBuffers() error {
+	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
+}
+func (d *Device) WriteChunkSize() (int, error) {
+	var cs C.uint
+	e := C.ftdi_write_data_get_chunksize(d.ctx, &cs)
+	return int(cs), d.makeError(e)
+}
+
+func (d *Device) SetWriteChunkSize(cs int) error {
+	return d.makeError(C.ftdi_write_data_set_chunksize(d.ctx, C.uint(cs)))
+}
+
 func (d *Device) Write(buf []byte) (int, error) {
 	n := C.ftdi_write_data(
 		d.ctx,

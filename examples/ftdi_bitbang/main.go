@@ -19,7 +19,7 @@ func main() {
 
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
 
-	Bps := 1024
+	Bps := 115200
 
 	log.Print("WriteByte")
 	for i := 0; i < 256; i++ {
@@ -30,7 +30,7 @@ func main() {
 	log.Print("Ok")
 	time.Sleep(time.Second)
 
-	buf := make([]byte, 2048)
+	buf := make([]byte, 80 * 2 * 3)
 	for i := range buf {
 		buf[i] = byte(i)
 	}
@@ -39,11 +39,16 @@ func main() {
 
 	log.Print("Write")
 	t := time.Now()
-	n, err := d.Write(buf)
+	n := 80
+	for i := 0; i < n; i++ {
+		_, err := d.Write(buf)
+		checkErr(err)
+	}
 	dt := time.Now().Sub(t)
-	checkErr(err)
 
+	n *= len(buf)
 	log.Printf(
 		"%d bytes written in %s (%d B/s)",
-		n, dt, time.Duration(n)*time.Second/dt)
+		n, dt, time.Duration(n)*time.Second/dt,
+	)
 }
