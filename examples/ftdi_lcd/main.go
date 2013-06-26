@@ -24,16 +24,21 @@ func checkErr(err error) {
 }
 
 func main() {
+	// Good values for JHD204A (136 FPS on 4x20 display)
+	baudrate := 1 << 17
+	waitTicks := 6
+
 	d, err := ftdi.OpenFirst(0x0403, 0x6001, ftdi.ChannelAny)
 	checkErr(err)
 	defer d.Close()
 	checkErr(d.SetBitmode(0xff, ftdi.ModeBitbang))
-
-	baudrate := 1 << 18 // B/s (good value for JHD204A)
-	fmt.Printf("Setting baudrate to %d B/s\n", baudrate)
 	checkErr(d.SetBaudrate(baudrate / 16))
 
-	lcd := hdc.NewDevice(hdc.NewBitbang(d), 4, 20)
+	w := hdc.NewBitbang(d, waitTicks)
+	// In conservative mode baudrate can be 1 << 23 on JHD204A
+	//w.FastMode(false)
+
+	lcd := hdc.NewDevice(w, 4, 20)
 	checkErr(lcd.Init())
 	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
 
