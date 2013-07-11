@@ -38,7 +38,7 @@ func main() {
 	// In conservative mode baudrate can be 1 << 23 on JHD204A
 	//w.FastMode(false)
 
-	lcd := hdc.NewDevice(w, 4, 20)
+	lcd := hdc.NewDevice(w, 20, 4)
 	checkErr(lcd.Init())
 	checkErr(lcd.SetDisplay(hdc.DisplayOn | hdc.CursorOn))
 
@@ -65,10 +65,4 @@ func main() {
 		"%.2f FPS\n",
 		float64(2*n)*float64(time.Second)/float64(time.Now().Sub(t)),
 	)
-
-	for i := 0; i < 4; i++ {
-		for i := 0; i < 20; i++ {
-
-		}
-	}
 }
