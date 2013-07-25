@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/ziutek/ftdi"
 	"os"
@@ -13,8 +14,27 @@ func checkErr(err error) {
 	}
 }
 
+var (
+	set     = flag.Bool("set", false, "Set EEPROM variables")
+	vendor  = flag.Int("vendor", 0x0403, "PCI vendor id")
+	product = flag.Int("product", 0x6001, "PCI product id")
+	invert  = flag.Int(
+		"invert",
+		0,
+		"Set invert flags (use 0x15 to set all lines down)",
+	)
+	cbusFunction = flag.Int(
+		"cbus",
+		int(ftdi.CBusIOMode),
+		"Function id for all CBUS lines",
+	)
+	maxCurrent = flag.Int("maxI", 200, "Maximum USB current (mA)")
+)
+
 func main() {
-	d, err := ftdi.OpenFirst(0x0403, 0x6001, ftdi.ChannelAny)
+	flag.Parse()
+
+	d, err := ftdi.OpenFirst(*vendor, *product, ftdi.ChannelAny)
 	checkErr(err)
 	defer d.Close()
 
@@ -23,22 +43,24 @@ func main() {
 	checkErr(e.Decode())
 	fmt.Println(e)
 
+	if !*set {
+		return
+	}
+
 	modified := false
 
-	invert := 0x15
-	if e.Invert() != invert {
-		e.SetInvert(invert)
+	if e.Invert() != *invert {
+		e.SetInvert(*invert)
 		modified = true
 	}
-	maxCurrent := 200 //mA
-	if e.MaxPower() != maxCurrent {
-		e.SetMaxPower(maxCurrent)
+	if e.MaxPower() != *maxCurrent {
+		e.SetMaxPower(*maxCurrent)
 		modified = true
 	}
-	cbusFunction := ftdi.CBusIOMode
+	cbusf := ftdi.CBusFunction(*cbusFunction)
 	for n := 0; n < 4; n++ {
-		if e.CBusFunction(n) != cbusFunction {
-			e.SetCBusFunction(n, cbusFunction)
+		if e.CBusFunction(n) != cbusf {
+			e.SetCBusFunction(n, cbusf)
 			modified = true
 		}
 	}
