@@ -203,12 +203,21 @@ func (d *Device) WriteByte(b byte) error {
 }
 
 // SetBaudrate sets the rate of data transfer
+//
 // For standard USB-UART adapter it sets UART boudrate.
+//
 // For bitbang mode the clock is actually 16 times the br. From the FTDI
 // documentation for FT232R bitbang mode: 
 // "The clock for the Asynchronous Bit Bang mode is actually 16 times the
 // Baud rate. A value of 9600 Baud would transfer the data at (9600x16) = 153600
 // bytes per second, or 1 every 6.5 μS."
+//
+// FT232R suports baudrates from 183 baud to 3 Mbaud but for real applications
+// it should be <= 1 Mbaud: Actual baudrate is set to discrete value that
+// satisfies the equation br = 3000000 / (n + x) where n can be an integer
+// between 2 and 16384 and x can be a sub-integer of the value 0, 0.125, 0.25,
+// 0.375, 0.5, 0.625, 0.75, or 0.875. When n == 1 then x should be 0, i.e.
+// baud rate divisors with values between 1 and 2 are not possible.
 func (d *Device) SetBaudrate(br int) error {
 	return d.makeError(C.ftdi_set_baudrate(d.ctx, C.int(br)))
 }
