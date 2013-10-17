@@ -172,6 +172,7 @@ func (d *Device) PurgeTxBuffer() error {
 func (d *Device) PurgeBuffers() error {
 	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
 }
+
 func (d *Device) WriteChunkSize() (int, error) {
 	var cs C.uint
 	e := C.ftdi_write_data_get_chunksize(d.ctx, &cs)
@@ -180,6 +181,18 @@ func (d *Device) WriteChunkSize() (int, error) {
 
 func (d *Device) SetWriteChunkSize(cs int) error {
 	return d.makeError(C.ftdi_write_data_set_chunksize(d.ctx, C.uint(cs)))
+}
+
+// LatencyTimer returns latency timer value (ms)
+func (d *Device) LatencyTimer() (int, error) {
+	var lt C.uchar
+	e := C.ftdi_get_latency_timer(d.ctx, &lt)
+	return int(lt), d.makeError(e)
+}
+
+// SetLatencyTimer sets latency timer to lt (value beetwen 1 and 255)
+func (d *Device) SetLatencyTimer(lt int) error {
+	return d.makeError(C.ftdi_set_latency_timer(d.ctx, C.uchar(lt)))
 }
 
 func (d *Device) Write(buf []byte) (int, error) {
@@ -207,7 +220,7 @@ func (d *Device) WriteByte(b byte) error {
 // For standard USB-UART adapter it sets UART boudrate.
 //
 // For bitbang mode the clock is actually 16 times the br. From the FTDI
-// documentation for FT232R bitbang mode: 
+// documentation for FT232R bitbang mode:
 // "The clock for the Asynchronous Bit Bang mode is actually 16 times the
 // Baud rate. A value of 9600 Baud would transfer the data at (9600x16) = 153600
 // bytes per second, or 1 every 6.5 μS."
