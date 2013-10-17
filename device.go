@@ -212,7 +212,7 @@ func (d *Device) WriteByte(b byte) error {
 // Baud rate. A value of 9600 Baud would transfer the data at (9600x16) = 153600
 // bytes per second, or 1 every 6.5 μS."
 //
-// FT232R suports baudrates from 183 baud to 3 Mbaud but for real applications
+// FT232R suports baudrates from 183.1 baud to 3 Mbaud but for real applications
 // it should be <= 1 Mbaud: Actual baudrate is set to discrete value that
 // satisfies the equation br = 3000000 / (n + x) where n can be an integer
 // between 2 and 16384 and x can be a sub-integer of the value 0, 0.125, 0.25,
