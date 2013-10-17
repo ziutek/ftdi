@@ -173,6 +173,16 @@ func (d *Device) PurgeBuffers() error {
 	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
 }
 
+func (d *Device) ReadChunkSize() (int, error) {
+	var cs C.uint
+	e := C.ftdi_read_data_get_chunksize(d.ctx, &cs)
+	return int(cs), d.makeError(e)
+}
+
+func (d *Device) SetReadChunkSize(cs int) error {
+	return d.makeError(C.ftdi_read_data_set_chunksize(d.ctx, C.uint(cs)))
+}
+
 func (d *Device) WriteChunkSize() (int, error) {
 	var cs C.uint
 	e := C.ftdi_write_data_get_chunksize(d.ctx, &cs)
