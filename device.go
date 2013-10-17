@@ -151,6 +151,7 @@ const (
 	ModeFT1284
 )
 
+// SetBitmode sets i/o mode for device
 func (d *Device) SetBitmode(iomask byte, mode Mode) error {
 	e := C.ftdi_set_bitmode(d.ctx, C.uchar(iomask), C.uchar(mode))
 	return d.makeError(e)
@@ -201,6 +202,13 @@ func (d *Device) WriteByte(b byte) error {
 	return nil
 }
 
+// SetBaudrate sets the rate of data transfer
+// For standard USB-UART adapter it sets UART boudrate.
+// For bitbang mode the clock is actually 16 times the br. From the FTDI
+// documentation for FT232R bitbang mode: 
+// "The clock for the Asynchronous Bit Bang mode is actually 16 times the
+// Baud rate. A value of 9600 Baud would transfer the data at (9600x16) = 153600
+// bytes per second, or 1 every 6.5 μS."
 func (d *Device) SetBaudrate(br int) error {
 	return d.makeError(C.ftdi_set_baudrate(d.ctx, C.int(br)))
 }
