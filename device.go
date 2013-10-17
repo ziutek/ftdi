@@ -179,6 +179,7 @@ func (d *Device) ReadChunkSize() (int, error) {
 	return int(cs), d.makeError(e)
 }
 
+// SetReadChunkSize configure read buffer chunk size (default is 4096).
 func (d *Device) SetReadChunkSize(cs int) error {
 	return d.makeError(C.ftdi_read_data_set_chunksize(d.ctx, C.uint(cs)))
 }
@@ -189,6 +190,7 @@ func (d *Device) WriteChunkSize() (int, error) {
 	return int(cs), d.makeError(e)
 }
 
+// SetWriteChunkSize configure write buffer chunk size (default is 4096).
 func (d *Device) SetWriteChunkSize(cs int) error {
 	return d.makeError(C.ftdi_write_data_set_chunksize(d.ctx, C.uint(cs)))
 }
