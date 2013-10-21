@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/ziutek/ftdi"
 	"log"
 )
@@ -20,13 +19,16 @@ func main() {
 	checkErr(d.SetBitmode(0x00, ftdi.ModeReset))
 	checkErr(d.SetBitmode(0x01, ftdi.ModeBitbang))
 
-	checkErr(d.SetBaudrate(256)) // bitbang mode, real B/s = 256*16 = 4096B
-	//checkErr(d.SetLatencyTimer(128))
-	checkErr(d.SetReadChunkSize(1024)) // 250 ms
+	checkErr(d.SetBaudrate(256)) // bitbang mode, actually: 256*32 = 8192 B/s
+	//checkErr(d.SetLatencyTimer(4))
+	lat, err := d.LatencyTimer()
+	checkErr(err)
+	log.Println("latency:", lat)
+	checkErr(d.SetReadChunkSize(512))
 
 	checkErr(d.WriteByte(0))
 
-	buf := make([]byte, 1000)
+	buf := make([]byte, 512)
 	for {
 		n, err := d.Read(buf)
 		checkErr(err)
@@ -36,7 +38,11 @@ func main() {
 				ones++
 			}
 		}
-		fmt.Printf("%d/%d\n", ones, n)
+		if n == len(buf) {
+			log.Printf("%d", ones)
+		} else {
+			log.Printf("! %d/%d/%d", ones, n, len(buf))
+		}
 	}
 
 	checkErr(d.SetBitmode(0x00, ftdi.ModeReset))

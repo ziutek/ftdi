@@ -9,7 +9,6 @@ package ft2xxr
 import "C"
 
 import (
-	"bytes"
 	"runtime"
 	"unsafe"
 )
@@ -83,109 +82,21 @@ func (c *Conn) Description() (string, error) {
 	if e < 0 {
 		return "", USBError(e)
 	}
-	if i := bytes.IndexByte(buf, 0); i != -1 {
-		buf = buf[:i]
-	}
-	return string(buf), nil
+	return b0tos(buf), nil
 }
 
-/*
-// Open opens the index-th device with a given vendor id, product id,
-// description and serial. Uses specified interface.
-func Open(vendor, product int, description, serial string, index uint,
-	c Channel) (*Device, error) {
-
-	d, err := makeDevice(c)
-	if err != nil {
-		return nil, err
-	}
-
-	descr := C.CString(description)
-	defer C.free(unsafe.Pointer(descr))
-	ser := C.CString(serial)
-	defer C.free(unsafe.Pointer(ser))
-
-	e := C.ftdi_usb_open_desc_index(
-		d.ctx,
-		C.int(vendor), C.int(product),
-		descr, ser,
-		C.uint(index),
+func (c *Conn) Serial() (string, error) {
+	buf := make([]byte, 256)
+	e := C.libusb_get_string_descriptor_ascii(
+		c.h, c.d.desc.iSerialNumber, (*C.uchar)(&buf[0]), C.int(len(buf)),
 	)
 	if e < 0 {
-		defer d.deinit()
-		return nil, d.makeError(e)
+		return "", USBError(e)
 	}
-	return d, nil
+	return b0tos(buf), nil
 }
 
-
-)func makeDevice(c Channel) (*Device, error) {
-	d := new(Device)
-	d.ctx = new(C.struct_ftdi_context)
-	e := C.ftdi_init(d.ctx)
-	if e < 0 {
-		defer d.deinit()
-		return nil, d.makeError(e)
-	}
-	if c != ChannelAny {
-		e = C.ftdi_set_interface(d.ctx, C.enum_ftdi_interface(c))
-		if e < 0 {
-			defer d.deinit()
-			return nil, d.makeError(e)
-		}
-	}
-	runtime.SetFinalizer(d, (*Device).Close)
-	return d, nil
-}
-
-func (d *Device) deinit() {
-	C.ftdi_deinit(d.ctx)
-}
-
-func (d *Device) makeError(code C.int) error {
-	if code >= 0 {
-		return nil
-	}
-	return &Error{
-		code: int(code),
-		str:  C.GoString(C.ftdi_get_error_string(d.ctx)),
-	}
-}
-
-// Close closes device
-func (d *Device) Close() error {
-	defer d.deinit()
-	e := C.ftdi_usb_close(d.ctx)
-	runtime.SetFinalizer(d, nil)
-	return d.makeError(e)
-}
-
-type Channel uint32
-
-const (
-	ChannelAny Channel = iota
-	ChannelA
-	ChannelB
-	ChannelC
-	ChannelD
-)
-
-// OpenFirst opens the first device with a given vendor and product ids. Uses
-// specified interface.
-func OpenFirst(vendor, product int, c Channel) (*Device, error) {
-	d, err := makeDevice(c)
-	if err != nil {
-		return nil, err
-	}
-	e := C.ftdi_usb_open(d.ctx, C.int(vendor), C.int(product))
-	if e < 0 {
-		defer d.deinit()
-		return nil, d.makeError(e)
-	}
-	return d, nil
-}
-
-type Mode byte
+/*type Mode byte
 
 const (
 	ModeReset Mode = iota
