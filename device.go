@@ -207,6 +207,18 @@ func (d *Device) SetLatencyTimer(lt int) error {
 	return d.makeError(C.ftdi_set_latency_timer(d.ctx, C.uchar(lt)))
 }
 
+func (d *Device) Read(buf []byte) (int, error) {
+	n := C.ftdi_read_data(
+		d.ctx,
+		(*C.uchar)(unsafe.Pointer(&buf[0])),
+		C.int(len(buf)),
+	)
+	if n < 0 {
+		return 0, d.makeError(n)
+	}
+	return int(n), nil
+}
+
 func (d *Device) Write(buf []byte) (int, error) {
 	n := C.ftdi_write_data(
 		d.ctx,
