@@ -1,4 +1,4 @@
-package ft2xxr
+package ftn
 
 /*
 #include <stdlib.h>
@@ -9,6 +9,7 @@ package ft2xxr
 import "C"
 
 import (
+	"bytes"
 	"runtime"
 	"unsafe"
 )
@@ -27,7 +28,7 @@ func init() {
 	}
 }
 
-// Device represents some FT2xxR device
+// Device represents some FTDI device
 type Device struct {
 	d    *C.libusb_device
 	desc C.struct_libusb_device_descriptor
@@ -74,6 +75,13 @@ type Conn struct {
 	d *Device
 }
 
+func bytes0str(b []byte) string {
+	if i := bytes.IndexByte(b, 0); i != -1 {
+		b = b[:i]
+	}
+	return string(b)
+}
+
 func (c *Conn) Description() (string, error) {
 	buf := make([]byte, 256)
 	e := C.libusb_get_string_descriptor_ascii(
@@ -82,7 +90,7 @@ func (c *Conn) Description() (string, error) {
 	if e < 0 {
 		return "", USBError(e)
 	}
-	return b0tos(buf), nil
+	return bytes0str(buf), nil
 }
 
 func (c *Conn) Serial() (string, error) {
@@ -93,8 +101,11 @@ func (c *Conn) Serial() (string, error) {
 	if e < 0 {
 		return "", USBError(e)
 	}
-	return b0tos(buf), nil
+	return bytes0str(buf), nil
 }
+
+func 
+
 
 /*type Mode byte
 

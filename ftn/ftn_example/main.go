@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/ziutek/ftdi/ft2xxr"
+	"github.com/ziutek/ftdi/ftn"
 	"os"
 )
 
@@ -13,7 +13,7 @@ func checkErr(err error) {
 }
 
 func main() {
-	dl, err := ft2xxr.FindDevices(0x0403, 0x6001)
+	dl, err := ftn.FindDevices(0x0403, 0x6001)
 	checkErr(err)
 	fmt.Println("Found", len(dl), "devices:")
 	for i, d := range dl {
