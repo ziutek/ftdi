@@ -28,7 +28,8 @@ var (
 		int(ftdi.CBusIOMode),
 		"Function id for all CBUS lines",
 	)
-	maxCurrent = flag.Int("maxI", 200, "Maximum USB current (mA)")
+	maxCurrent  = flag.Int("maxI", 200, "Maximum USB current (mA)")
+	highCurrent = flag.Bool("highDrive", false, "Set high current drive flag")
 )
 
 func main() {
@@ -63,6 +64,10 @@ func main() {
 			e.SetCBusFunction(n, cbusf)
 			modified = true
 		}
+	}
+	if e.HighCurrent(ftdi.ChannelAny) != *highCurrent {
+		e.SetHighCurrent(ftdi.ChannelAny, *highCurrent)
+		modified = true
 	}
 
 	if modified {
