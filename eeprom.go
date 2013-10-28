@@ -285,7 +285,15 @@ func (e EEPROM) HighCurrent(c Channel) bool {
 }
 
 func (e EEPROM) SetHighCurrent(c Channel, v bool) {
-	e.setChannelValue(highCurrent, c, cbool(v))
+	var hc C.int
+	if v {
+		if e.d.Type() == TypeR {
+			hc = C.HIGH_CURRENT_DRIVE_R
+		} else {
+			hc = C.HIGH_CURRENT_DRIVE
+		}
+	}
+	e.setChannelValue(highCurrent, c+ChannelA, hc)
 }
 
 type CBusFunction byte
