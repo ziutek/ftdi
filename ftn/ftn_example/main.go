@@ -23,6 +23,6 @@ func main() {
 		checkErr(err)
 		serial, err := c.Serial()
 		checkErr(err)
-		fmt.Printf(" %d: desc='%s' serial='%s'\n", i, desc, serial)
+		fmt.Printf("%d: desc='%s' serial='%s'\n", i, desc, serial)
 	}
 }

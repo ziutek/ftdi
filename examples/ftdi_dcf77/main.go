@@ -38,6 +38,18 @@ func find0(buf []byte) int {
 	return -1
 }
 
+func twoBits(b []byte) byte {
+	b0 := b[0]&0x02 == 0
+	b1 := b[1]&0x02 == 0
+	if b0 && b1 {
+		return '.'
+	} else if !b0 && !b1 {
+		return 'O'
+	} else {
+		return 'o'
+	}
+}
+
 func main() {
 	d, err := ftdi.OpenFirst(0x0403, 0x6001, ftdi.ChannelAny)
 	checkErr(err)
@@ -67,6 +79,13 @@ func main() {
 			log.Printf("Partial buffer: %d/%d", n, len(buf))
 			data = buf[:n]
 		}
+		show := make([]byte, len(data)/2)
+		for i := range show {
+			k := i * 2
+			show[i] = twoBits(data[k : k+2])
+		}
+		log.Printf("%s", show)
+		continue
 
 	analysis:
 		if pulseLen > 0 {
