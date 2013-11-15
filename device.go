@@ -3,6 +3,7 @@ package ftdi
 /*
 #include <stdlib.h>
 #include <ftdi.h>
+#include <libusb.h>
 
 #cgo pkg-config: libftdi1
 */
@@ -12,6 +13,48 @@ import (
 	"runtime"
 	"unsafe"
 )
+
+func makeError(ctx *C.struct_ftdi_context, code C.int) error {
+	if code >= 0 {
+		return nil
+	}
+	return &Error{
+		code: int(code),
+		str:  C.GoString(C.ftdi_get_error_string(ctx)),
+	}
+}
+
+type USBDev struct {
+	d *C.struct_libusb_device
+}
+
+func FindAll(vendor, product int) ([]USBDev, error) {
+	ctx := new(C.struct_ftdi_context)
+	e := C.ftdi_init(ctx)
+	defer C.ftdi_deinit(ctx)
+	if e < 0 {
+		return nil, makeError(ctx, e)
+	}
+	var dl *C.struct_ftdi_device_list
+	e = C.ftdi_usb_find_all(ctx, &dl, C.int(vendor), C.int(product))
+	if e < 0 {
+		return nil, makeError(ctx, e)
+	}
+	defer C.ftdi_list_free2(dl)
+
+	n := 0
+	for e := dl; e != nil; e = e.next {
+		n++
+	}
+	ret := make([]USBDev, n)
+	i := 0
+	for e := dl; e != nil; e = e.next {
+		ret[i].d = e.dev
+		C.libusb_ref_device(e.dev)
+		i++
+	}
+	return ret, nil
+}
 
 // Device represents some FTDI device
 type Device struct {
@@ -67,13 +110,7 @@ func (d *Device) deinit() {
 }
 
 func (d *Device) makeError(code C.int) error {
-	if code >= 0 {
-		return nil
-	}
-	return &Error{
-		code: int(code),
-		str:  C.GoString(C.ftdi_get_error_string(d.ctx)),
-	}
+	return makeError(d.ctx, code)
 }
 
 // Close closes device
@@ -93,6 +130,19 @@ const (
 	ChannelC
 	ChannelD
 )
+
+func OpenUSBDev(u USBDev, c Channel) (*Device, error) {
+	d, err := makeDevice(c)
+	if err != nil {
+		return nil, err
+	}
+	e := C.ftdi_usb_open_dev(d.ctx, u.d)
+	if e < 0 {
+		defer d.deinit()
+		return nil, d.makeError(e)
+	}
+	return d, nil
+}
 
 // OpenFirst opens the first device with a given vendor and product ids. Uses
 // specified interface.
@@ -257,6 +307,16 @@ func (d *Device) WriteByte(b byte) error {
 // baud rate divisors with values between 1 and 2 are not possible.
 func (d *Device) SetBaudrate(br int) error {
 	return d.makeError(C.ftdi_set_baudrate(d.ctx, C.int(br)))
+}
+
+// ChipID reads FTDI Chip-ID (not all devices support this)
+func (d *Device) ChipID() (uint32, error) {
+	var id C.uint
+	e := C.ftdi_read_chipid(d.ctx, &id)
+	if e < 0 {
+		return 0, d.makeError(e)
+	}
+	return uint32(id), nil
 }
 
 // EEPROM returns a handler to the device internal EEPROM subsystem
