@@ -10,6 +10,7 @@ package ftdi
 import "C"
 
 import (
+	"errors"
 	"runtime"
 	"unsafe"
 )
@@ -26,9 +27,70 @@ func makeError(ctx *C.struct_ftdi_context, code C.int) error {
 
 type USBDev struct {
 	d *C.struct_libusb_device
+
+	Manufacturer, Description, Serial string
 }
 
-func FindAll(vendor, product int) ([]USBDev, error) {
+func (u *USBDev) unref() {
+	C.libusb_unref_device(u.d)
+}
+
+func getStringDescriptor(ctx *C.struct_ftdi_context, id C.uint8_t) (string, error) {
+	var buf [128]C.char
+
+	e := C.libusb_get_string_descriptor(
+		ctx.usb_dev, id, 0,
+		(*C.uchar)(unsafe.Pointer(&buf[0])), C.int(len(buf)),
+	)
+	if e < 0 {
+		return "", makeError(ctx, e)
+	}
+	if e < 2 {
+		return "", errors.New("not enough data for USB string descriptor")
+	}
+	l := C.int(buf[0])
+	if l > e {
+		return "", errors.New("USB string descriptor is too short")
+	}
+	return C.GoStringN(&buf[2], l-2), nil
+
+}
+
+// getStrings read Manufacturer, Description, Serial strings descriptors
+// in unicode form. It doesn't use ftdi_usb_get_strings because it converts
+// unicode strings to ASCII.
+func (u *USBDev) getStrings(ctx *C.struct_ftdi_context) error {
+	e := C.libusb_open(u.d, &ctx.usb_dev)
+	if e < 0 {
+		return makeError(ctx, e)
+	}
+	defer func() {
+		C.libusb_close(ctx.usb_dev)
+		ctx.usb_dev = nil
+	}()
+
+	var desc C.struct_libusb_device_descriptor
+	e = C.libusb_get_device_descriptor(u.d, &desc)
+	if e < 0 {
+		return makeError(ctx, e)
+	}
+
+	var err error
+
+	u.Manufacturer, err = getStringDescriptor(ctx, desc.iManufacturer)
+	if err != nil {
+		return err
+	}
+	u.Description, err = getStringDescriptor(ctx, desc.iProduct)
+	if err != nil {
+		return err
+	}
+	u.Serial, err = getStringDescriptor(ctx, desc.iSerialNumber)
+
+	return err
+}
+
+func FindAll(vendor, product int) ([]*USBDev, error) {
 	ctx := new(C.struct_ftdi_context)
 	e := C.ftdi_init(ctx)
 	defer C.ftdi_deinit(ctx)
@@ -46,11 +108,19 @@ func FindAll(vendor, product int) ([]USBDev, error) {
 	for e := dl; e != nil; e = e.next {
 		n++
 	}
-	ret := make([]USBDev, n)
+	ret := make([]*USBDev, n)
 	i := 0
 	for e := dl; e != nil; e = e.next {
-		ret[i].d = e.dev
+		u := new(USBDev)
+		u.d = e.dev
 		C.libusb_ref_device(e.dev)
+		runtime.SetFinalizer(u, (*USBDev).unref)
+
+		if err := u.getStrings(ctx); err != nil {
+			return nil, err
+		}
+
+		ret[i] = u
 		i++
 	}
 	return ret, nil
@@ -131,7 +201,7 @@ const (
 	ChannelD
 )
 
-func OpenUSBDev(u USBDev, c Channel) (*Device, error) {
+func OpenUSBDev(u *USBDev, c Channel) (*Device, error) {
 	d, err := makeDevice(c)
 	if err != nil {
 		return nil, err

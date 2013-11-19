@@ -28,7 +28,10 @@ func main() {
 		if d.Type() == ftdi.TypeR {
 			cid, err := d.ChipID()
 			if err == nil {
-				fmt.Printf("%d: 0x%08x\n", i, cid)
+				fmt.Printf(
+					"%d: '%s' '%s' '%s' 0x%08x\n",
+					i, u.Manufacturer, u.Description, u.Serial, cid,
+				)
 			} else {
 				fmt.Fprintf(
 					os.Stderr,
@@ -36,6 +39,11 @@ func main() {
 					i, err,
 				)
 			}
+		} else {
+			fmt.Printf(
+				"%d: '%s' '%s' '%s'\n",
+				i, u.Manufacturer, u.Description, u.Serial,
+			)
 		}
 		d.Close()
 	}
