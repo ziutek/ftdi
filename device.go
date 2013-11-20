@@ -12,6 +12,7 @@ import "C"
 import (
 	"errors"
 	"runtime"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -52,7 +53,12 @@ func getStringDescriptor(ctx *C.struct_ftdi_context, id C.uint8_t) (string, erro
 	if l > e {
 		return "", errors.New("USB string descriptor is too short")
 	}
-	return C.GoStringN(&buf[2], l-2), nil
+	b := buf[2:l]
+	uni16 := make([]uint16, len(b)/2)
+	for i := range uni16 {
+		uni16[i] = uint16(b[i*2]) | uint16(b[i*2+1])<<8
+	}
+	return string(utf16.Decode(uni16)), nil
 
 }
 

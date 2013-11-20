@@ -19,32 +19,31 @@ func main() {
 	checkErr(err)
 
 	for i, u := range l {
+		hexSerial := "0x"
+		for i := 0; i < len(u.Serial); i++ {
+			hexSerial += fmt.Sprintf("%02x", u.Serial[i])
+		}
+		fmt.Printf(
+			"%d: '%s' '%s' '%s'=%s",
+			i, u.Manufacturer, u.Description, u.Serial, hexSerial,
+		)
 		d, err := ftdi.OpenUSBDev(u, ftdi.ChannelAny)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Can't open #%d: %s\n", i, err)
+			fmt.Printf(" [can't open device: %s]\n", err)
 			continue
 		}
 
 		if d.Type() == ftdi.TypeR {
 			cid, err := d.ChipID()
 			if err == nil {
-				fmt.Printf(
-					"%d: '%s' '%s' '%s' 0x%08x\n",
-					i, u.Manufacturer, u.Description, u.Serial, cid,
-				)
+				fmt.Printf(" 0x%08x\n", cid)
 			} else {
-				fmt.Fprintf(
-					os.Stderr,
-					"Can't read ChipID for #%d: %s\n",
-					i, err,
-				)
+				fmt.Printf("[can't read ChipID: %s]\n", err)
 			}
 		} else {
-			fmt.Printf(
-				"%d: '%s' '%s' '%s'\n",
-				i, u.Manufacturer, u.Description, u.Serial,
-			)
+			fmt.Println()
 		}
+
 		d.Close()
 	}
 }
