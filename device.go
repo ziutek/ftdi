@@ -90,6 +90,8 @@ func (u *USBDev) getStrings(ctx *C.struct_ftdi_context) error {
 	return err
 }
 
+// FindAll search for all USB devices with specified vendor and  product id.
+// It returns slice od found devices.
 func FindAll(vendor, product int) ([]*USBDev, error) {
 	ctx := new(C.struct_ftdi_context)
 	e := C.ftdi_init(ctx)
@@ -126,11 +128,12 @@ func FindAll(vendor, product int) ([]*USBDev, error) {
 	return ret, nil
 }
 
-// Device represents some FTDI device
+// Device represents FTDI device.
 type Device struct {
 	ctx *C.struct_ftdi_context
 }
 
+// Type is numeric type id of FTDI device.
 type Type uint32
 
 const (
@@ -145,6 +148,7 @@ const (
 
 var types = []string{"AM", "BM", "2232C", "R", "2232H", "4232H", "232H"}
 
+// String returns text name that describes type id.
 func (t Type) String() string {
 	if t >= Type(len(types)) {
 		return "unknown"
@@ -152,6 +156,7 @@ func (t Type) String() string {
 	return types[t]
 }
 
+// Type returns type of device d.
 func (d *Device) Type() Type {
 	return Type(d.ctx._type)
 }
@@ -191,6 +196,8 @@ func (d *Device) Close() error {
 	return d.makeError(e)
 }
 
+// Channel represents channel (interface) of FTDI device. Some devices have more
+// than one channel (eg. FT2232 has 2 channels, FT4232 has 4 channels).
 type Channel uint32
 
 const (
@@ -201,6 +208,8 @@ const (
 	ChannelD
 )
 
+// OpenUSBDev opens channel (interface) c of USB device u.
+// u must be FTDI device.
 func OpenUSBDev(u *USBDev, c Channel) (*Device, error) {
 	d, err := makeDevice(c)
 	if err != nil {
@@ -215,7 +224,7 @@ func OpenUSBDev(u *USBDev, c Channel) (*Device, error) {
 }
 
 // OpenFirst opens the first device with a given vendor and product ids. Uses
-// specified interface.
+// specified channel c.
 func OpenFirst(vendor, product int, c Channel) (*Device, error) {
 	d, err := makeDevice(c)
 	if err != nil {
@@ -230,7 +239,7 @@ func OpenFirst(vendor, product int, c Channel) (*Device, error) {
 }
 
 // Open opens the index-th device with a given vendor id, product id,
-// description and serial. Uses specified interface.
+// description and serial. Uses specified channel c.
 func Open(vendor, product int, description, serial string, index uint,
 	c Channel) (*Device, error) {
 
@@ -257,6 +266,7 @@ func Open(vendor, product int, description, serial string, index uint,
 	return d, nil
 }
 
+// Mode represents operation mode that FTDI device can work.
 type Mode byte
 
 const (
@@ -271,62 +281,74 @@ const (
 	ModeFT1284
 )
 
-// SetBitmode sets i/o mode for device
+// SetBitmode sets operation mode for device d to mode. iomask bitmask
+// configres lines corresponding to its bits as input (bit=0) or outpur (bit=1).
 func (d *Device) SetBitmode(iomask byte, mode Mode) error {
 	e := C.ftdi_set_bitmode(d.ctx, C.uchar(iomask), C.uchar(mode))
 	return d.makeError(e)
 }
 
+// Reset resets device d.
 func (d *Device) Reset() error {
 	return d.makeError(C.ftdi_usb_reset(d.ctx))
 }
 
+// PurgeRxBuffer clears Rx buffer (buffer for data received from USB?).
 func (d *Device) PurgeRxBuffer() error {
 	return d.makeError(C.ftdi_usb_purge_rx_buffer(d.ctx))
 }
 
+// PurgeTxBuffer clears Tx buffer (buffer for data that will be sended to USB?).
 func (d *Device) PurgeTxBuffer() error {
 	return d.makeError(C.ftdi_usb_purge_tx_buffer(d.ctx))
 }
 
+// PurgeBuffers clears both (Tx and Rx) buffers.
 func (d *Device) PurgeBuffers() error {
 	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
 }
 
+// ReadChunkSize returns current value of read buffer chunk size.
 func (d *Device) ReadChunkSize() (int, error) {
 	var cs C.uint
 	e := C.ftdi_read_data_get_chunksize(d.ctx, &cs)
 	return int(cs), d.makeError(e)
 }
 
-// SetReadChunkSize configure read buffer chunk size (default is 4096).
+// SetReadChunkSize configure read chunk size for device (default is 4096B) and
+// size of software buffer dedicated for reading data from device...
 func (d *Device) SetReadChunkSize(cs int) error {
 	return d.makeError(C.ftdi_read_data_set_chunksize(d.ctx, C.uint(cs)))
 }
 
+// WriteChunkSize returns current value of write chunk size.
 func (d *Device) WriteChunkSize() (int, error) {
 	var cs C.uint
 	e := C.ftdi_write_data_get_chunksize(d.ctx, &cs)
 	return int(cs), d.makeError(e)
 }
 
-// SetWriteChunkSize configure write buffer chunk size (default is 4096).
+// SetWriteChunkSize configure write chunk size (default is 4096). If more than
+// cs bytes need to be send to device, they will be split to chunks of size cs.
 func (d *Device) SetWriteChunkSize(cs int) error {
 	return d.makeError(C.ftdi_write_data_set_chunksize(d.ctx, C.uint(cs)))
 }
 
-// LatencyTimer returns latency timer value (ms)
+// LatencyTimer returns latency timer value [ms].
 func (d *Device) LatencyTimer() (int, error) {
 	var lt C.uchar
 	e := C.ftdi_get_latency_timer(d.ctx, &lt)
 	return int(lt), d.makeError(e)
 }
 
-// SetLatencyTimer sets latency timer to lt (value beetwen 1 and 255)
+// SetLatencyTimer sets latency timer to lt (value beetwen 1 and 255). If FTDI
+// device has fewer data to completelly fill one USB packet (<62 B) it waits for
+// lt ms before sending data to USB.
 func (d *Device) SetLatencyTimer(lt int) error {
 	return d.makeError(C.ftdi_set_latency_timer(d.ctx, C.uchar(lt)))
 }
 
+// Read reads data from device to buf. It returns number of bytes read.
 func (d *Device) Read(buf []byte) (int, error) {
 	n := C.ftdi_read_data(
 		d.ctx,
@@ -339,6 +361,7 @@ func (d *Device) Read(buf []byte) (int, error) {
 	return int(n), nil
 }
 
+// Write writes data from buf to device. It retruns number of bytes written.
 func (d *Device) Write(buf []byte) (int, error) {
 	n := C.ftdi_write_data(
 		d.ctx,
@@ -351,15 +374,24 @@ func (d *Device) Write(buf []byte) (int, error) {
 	return int(n), nil
 }
 
+// ReadByte reads one byte from device.
+func (d *Device) ReadByte() (byte, error) {
+	var b byte
+	if n := C.ftdi_read_data(d.ctx, (*C.uchar)(&b), 1); n != 1 {
+		return 0, d.makeError(n)
+	}
+	return b, nil
+}
+
+// WriteByte writes one byte to device.
 func (d *Device) WriteByte(b byte) error {
-	n := C.ftdi_write_data(d.ctx, (*C.uchar)(&b), 1)
-	if n != 1 {
+	if n := C.ftdi_write_data(d.ctx, (*C.uchar)(&b), 1); n != 1 {
 		return d.makeError(n)
 	}
 	return nil
 }
 
-// SetBaudrate sets the rate of data transfer
+// SetBaudrate sets the rate of data transfer.
 //
 // For standard USB-UART adapter it sets UART boudrate.
 //
@@ -379,7 +411,7 @@ func (d *Device) SetBaudrate(br int) error {
 	return d.makeError(C.ftdi_set_baudrate(d.ctx, C.int(br)))
 }
 
-// ChipID reads FTDI Chip-ID (not all devices support this)
+// ChipID reads FTDI Chip-ID (not all devices support this).
 func (d *Device) ChipID() (uint32, error) {
 	var id C.uint
 	e := C.ftdi_read_chipid(d.ctx, &id)
@@ -389,7 +421,7 @@ func (d *Device) ChipID() (uint32, error) {
 	return uint32(id), nil
 }
 
-// EEPROM returns a handler to the device internal EEPROM subsystem
+// EEPROM returns a handler to the device internal EEPROM subsystem.
 func (d *Device) EEPROM() EEPROM {
 	return EEPROM{d}
 }
