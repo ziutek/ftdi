@@ -300,12 +300,12 @@ func (d *Device) Reset() error {
 }
 
 // PurgeRxBuffer clears Rx buffer (buffer for data received from USB?).
-func (d *Device) PurgeRxBuffer() error {
+func (d *Device) PurgeWriteBuffer() error {
 	return d.makeError(C.ftdi_usb_purge_rx_buffer(d.ctx))
 }
 
 // PurgeTxBuffer clears Tx buffer (buffer for data that will be sended to USB?).
-func (d *Device) PurgeTxBuffer() error {
+func (d *Device) PurgeReadBuffer() error {
 	return d.makeError(C.ftdi_usb_purge_tx_buffer(d.ctx))
 }
 
