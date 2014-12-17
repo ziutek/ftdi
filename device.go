@@ -314,6 +314,10 @@ func (d *Device) PurgeBuffers() error {
 	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
 }
 
+func (d *Device) Flush() error {
+	return nil
+}
+
 // ReadChunkSize returns current value of read buffer chunk size.
 func (d *Device) ReadChunkSize() (int, error) {
 	var cs C.uint
