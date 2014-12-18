@@ -150,6 +150,7 @@ const (
 	Type2232H
 	Type4232H
 	Type232H
+	Type230x
 )
 
 var types = []string{"AM", "BM", "2232C", "R", "2232H", "4232H", "232H"}
@@ -276,7 +277,7 @@ func Open(vendor, product int, description, serial string, index uint,
 type Mode byte
 
 const (
-	ModeReset Mode = iota
+	ModeReset Mode = (1 << iota) >> 1
 	ModeBitbang
 	ModeMPSSE
 	ModeSyncBB
