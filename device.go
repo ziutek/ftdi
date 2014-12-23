@@ -27,24 +27,23 @@ func makeError(ctx *C.struct_ftdi_context, code C.int) error {
 }
 
 type USBDev struct {
-	d *C.struct_libusb_device
-
 	Manufacturer, Description, Serial string
+
+	d *C.struct_libusb_device
 }
 
 func (u *USBDev) unref() {
 	C.libusb_unref_device(u.d)
 }
 
-func getStringDescriptor(ctx *C.struct_ftdi_context, id C.uint8_t) (string, error) {
+func getStringDescriptor(dh *C.libusb_device_handle, id C.uint8_t) (string, error) {
 	var buf [128]C.char
-
 	e := C.libusb_get_string_descriptor(
-		ctx.usb_dev, id, 0,
+		dh, id, 0,
 		(*C.uchar)(unsafe.Pointer(&buf[0])), C.int(len(buf)),
 	)
 	if e < 0 {
-		return "", makeError(ctx, e)
+		return "", USBError(e)
 	}
 	if e < 2 {
 		return "", errors.New("not enough data for USB string descriptor")
@@ -62,46 +61,36 @@ func getStringDescriptor(ctx *C.struct_ftdi_context, id C.uint8_t) (string, erro
 
 }
 
-// getStrings read Manufacturer, Description, Serial strings descriptors
-// in unicode form. It doesn't use ftdi_usb_get_strings because it converts
-// unicode strings to ASCII.
-func (u *USBDev) getStrings(ctx *C.struct_ftdi_context) error {
-	e := C.libusb_open(u.d, &ctx.usb_dev)
-	if e < 0 {
-		return makeError(ctx, e)
+// getStrings updates Manufacturer, Description, Serial strings descriptors
+// in unicode form. It doesn't use ftdi_usb_get_strings because libftdi
+// converts  unicode strings to ASCII.
+func (u *USBDev) getStrings(dev *C.libusb_device, ds *C.struct_libusb_device_descriptor) error {
+	var (
+		err error
+		dh  *C.libusb_device_handle
+	)
+	if e := C.libusb_open(dev, &dh); e != 0 {
+		return USBError(e)
 	}
-	defer func() {
-		C.libusb_close(ctx.usb_dev)
-		ctx.usb_dev = nil
-	}()
-
-	var desc C.struct_libusb_device_descriptor
-	e = C.libusb_get_device_descriptor(u.d, &desc)
-	if e < 0 {
-		return makeError(ctx, e)
-	}
-
-	var err error
-
-	u.Manufacturer, err = getStringDescriptor(ctx, desc.iManufacturer)
+	defer C.libusb_close(dh)
+	u.Manufacturer, err = getStringDescriptor(dh, ds.iManufacturer)
 	if err != nil {
 		return err
 	}
-	u.Description, err = getStringDescriptor(ctx, desc.iProduct)
+	u.Description, err = getStringDescriptor(dh, ds.iProduct)
 	if err != nil {
 		return err
 	}
-	u.Serial, err = getStringDescriptor(ctx, desc.iSerialNumber)
-
+	u.Serial, err = getStringDescriptor(dh, ds.iSerialNumber)
 	return err
 }
 
 // FindAll search for all USB devices with specified vendor and  product id.
 // It returns slice od found devices.
-func FindAll(vendor, product int) ([]*USBDev, error) {
+/*func FindAll(vendor, product int) ([]*USBDev, error) {
 	ctx := new(C.struct_ftdi_context)
 	e := C.ftdi_init(ctx)
-	defer C.ftdi_deinit(ctx)
+	//	defer C.ftdi_deinit(ctx)
 	if e < 0 {
 		return nil, makeError(ctx, e)
 	}
@@ -113,15 +102,15 @@ func FindAll(vendor, product int) ([]*USBDev, error) {
 	defer C.ftdi_list_free2(dl)
 
 	n := 0
-	for e := dl; e != nil; e = e.next {
+	for el := dl; el != nil; el = el.next {
 		n++
 	}
 	ret := make([]*USBDev, n)
 	i := 0
-	for e := dl; e != nil; e = e.next {
+	for el := dl; el != nil; el = el.next {
 		u := new(USBDev)
-		u.d = e.dev
-		C.libusb_ref_device(e.dev)
+		u.d = el.dev
+		C.libusb_ref_device(el.dev)
 		runtime.SetFinalizer(u, (*USBDev).unref)
 
 		if err := u.getStrings(ctx); err != nil {
@@ -130,6 +119,65 @@ func FindAll(vendor, product int) ([]*USBDev, error) {
 
 		ret[i] = u
 		i++
+	}
+	return ret, nil
+}*/
+
+func FindAll(vendor, product int) ([]*USBDev, error) {
+	if e := C.libusb_init(nil); e != 0 {
+		return nil, USBError(e)
+	}
+	var dptr **C.struct_libusb_device
+	if e := C.libusb_get_device_list(nil, &dptr); e < 0 {
+		return nil, USBError(e)
+	}
+	defer C.libusb_free_device_list(dptr, 1)
+	devs := (*[1 << 28]*C.libusb_device)(unsafe.Pointer(dptr))
+
+	var n int
+	for i, dev := range devs[:] {
+		if dev == nil {
+			n = i
+			break
+		}
+	}
+	descr := make([]*C.struct_libusb_device_descriptor, n)
+	for i, dev := range devs[:n] {
+		var ds C.struct_libusb_device_descriptor
+		if e := C.libusb_get_device_descriptor(dev, &ds); e < 0 {
+			return nil, USBError(e)
+		}
+		if int(ds.idVendor) == vendor && int(ds.idProduct) == product {
+			descr[i] = &ds
+			continue
+		}
+		if vendor == 0 && product == 0 && ds.idVendor == 0x403 {
+			switch ds.idProduct {
+			case 0x6001, 0x6010, 0x6011, 0x6014, 0x6015:
+				descr[i] = &ds
+				continue
+			}
+		}
+		n--
+	}
+	if n == 0 {
+		return nil, nil
+	}
+	ret := make([]*USBDev, n)
+	n = 0
+	for i, ds := range descr {
+		if ds == nil {
+			continue
+		}
+		u := new(USBDev)
+		u.d = devs[i]
+		C.libusb_ref_device(u.d)
+		runtime.SetFinalizer(u, (*USBDev).unref)
+		if err := u.getStrings(u.d, ds); err != nil {
+			return nil, err
+		}
+		ret[n] = u
+		n++
 	}
 	return ret, nil
 }
@@ -171,14 +219,12 @@ func (d *Device) Type() Type {
 func makeDevice(c Channel) (*Device, error) {
 	d := new(Device)
 	d.ctx = new(C.struct_ftdi_context)
-	e := C.ftdi_init(d.ctx)
-	if e < 0 {
+	if e := C.ftdi_init(d.ctx); e < 0 {
 		defer d.deinit()
 		return nil, d.makeError(e)
 	}
 	if c != ChannelAny {
-		e = C.ftdi_set_interface(d.ctx, C.enum_ftdi_interface(c))
-		if e < 0 {
+		if e := C.ftdi_set_interface(d.ctx, C.enum_ftdi_interface(c)); e < 0 {
 			defer d.deinit()
 			return nil, d.makeError(e)
 		}
@@ -222,8 +268,7 @@ func OpenUSBDev(u *USBDev, c Channel) (*Device, error) {
 	if err != nil {
 		return nil, err
 	}
-	e := C.ftdi_usb_open_dev(d.ctx, u.d)
-	if e < 0 {
+	if e := C.ftdi_usb_open_dev(d.ctx, u.d); e < 0 {
 		defer d.deinit()
 		return nil, d.makeError(e)
 	}
@@ -237,8 +282,7 @@ func OpenFirst(vendor, product int, c Channel) (*Device, error) {
 	if err != nil {
 		return nil, err
 	}
-	e := C.ftdi_usb_open(d.ctx, C.int(vendor), C.int(product))
-	if e < 0 {
+	if e := C.ftdi_usb_open(d.ctx, C.int(vendor), C.int(product)); e < 0 {
 		defer d.deinit()
 		return nil, d.makeError(e)
 	}
@@ -313,10 +357,6 @@ func (d *Device) PurgeReadBuffer() error {
 // PurgeBuffers clears both (Tx and Rx) buffers.
 func (d *Device) PurgeBuffers() error {
 	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
-}
-
-func (d *Device) Flush() error {
-	return nil
 }
 
 // ReadChunkSize returns current value of read buffer chunk size.
@@ -425,8 +465,7 @@ func (d *Device) SetBaudrate(br int) error {
 // ChipID reads FTDI Chip-ID (not all devices support this).
 func (d *Device) ChipID() (uint32, error) {
 	var id C.uint
-	e := C.ftdi_read_chipid(d.ctx, &id)
-	if e < 0 {
+	if e := C.ftdi_read_chipid(d.ctx, &id); e < 0 {
 		return 0, d.makeError(e)
 	}
 	return uint32(id), nil
