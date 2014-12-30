@@ -399,12 +399,12 @@ func (d *Device) SetLatencyTimer(lt int) error {
 	return d.makeError(C.ftdi_set_latency_timer(d.ctx, C.uchar(lt)))
 }
 
-// Read reads data from device to buf. It returns number of bytes read.
-func (d *Device) Read(buf []byte) (int, error) {
+// Read reads data from device to data. It returns number of bytes read.
+func (d *Device) Read(data []byte) (int, error) {
 	n := C.ftdi_read_data(
 		d.ctx,
-		(*C.uchar)(unsafe.Pointer(&buf[0])),
-		C.int(len(buf)),
+		(*C.uchar)(unsafe.Pointer(&data[0])),
+		C.int(len(data)),
 	)
 	if n < 0 {
 		return 0, d.makeError(n)
@@ -413,11 +413,11 @@ func (d *Device) Read(buf []byte) (int, error) {
 }
 
 // Write writes data from buf to device. It retruns number of bytes written.
-func (d *Device) Write(buf []byte) (int, error) {
+func (d *Device) Write(data []byte) (int, error) {
 	n := C.ftdi_write_data(
 		d.ctx,
-		(*C.uchar)(unsafe.Pointer(&buf[0])),
-		C.int(len(buf)),
+		(*C.uchar)(unsafe.Pointer(&data[0])),
+		C.int(len(data)),
 	)
 	if n < 0 {
 		return 0, d.makeError(n)
@@ -474,4 +474,48 @@ func (d *Device) ChipID() (uint32, error) {
 // EEPROM returns a handler to the device internal EEPROM subsystem.
 func (d *Device) EEPROM() EEPROM {
 	return EEPROM{d}
+}
+
+type Transfer struct {
+	c C.struct_ftdi_transfer_control
+}
+
+var errSubmitTransfer = errors.New("libusb_submit_transfer")
+
+func (d *Device) SubmitRead(data []byte) (*Transfer, error) {
+	tc, err := C.ftdi_read_data_submit(
+		d.ctx,
+		(*C.uchar)(unsafe.Pointer(&data[0])),
+		C.int(len(data)),
+	)
+	if tc == nil {
+		if err == nil {
+			err = errSubmitTransfer
+		}
+		return nil, err
+	}
+	return (*Transfer)(unsafe.Pointer(tc)), nil
+}
+
+func (d *Device) SubmitWrite(data []byte) (*Transfer, error) {
+	tc, err := C.ftdi_write_data_submit(
+		d.ctx,
+		(*C.uchar)(unsafe.Pointer(&data[0])),
+		C.int(len(data)),
+	)
+	if tc == nil {
+		if err == nil {
+			err = errSubmitTransfer
+		}
+		return nil, err
+	}
+	return (*Transfer)(unsafe.Pointer(tc)), nil
+}
+
+func (t *Transfer) Done() (int, error) {
+	n := C.ftdi_transfer_data_done(&t.c)
+	if n < 0 {
+		return 0, makeError(t.c.ftdi, n)
+	}
+	return int(n), nil
 }
