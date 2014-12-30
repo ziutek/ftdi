@@ -9,48 +9,18 @@ import (
 	"github.com/ziutek/ftdi"
 )
 
-func clkbits(baudrate int, clk, clkdiv int) (bestbaud int, encdiv uint32) {
-	frac_code := []byte{0, 3, 2, 4, 1, 5, 6, 7}
-	var divisor, bestdiv int
-	if baudrate >= clk/clkdiv {
-		encdiv = 0
-		bestbaud = clk / clkdiv
-	} else if baudrate >= clk/(clkdiv+clkdiv/2) {
-		encdiv = 1
-		bestbaud = clk / (clkdiv + clkdiv/2)
-	} else if baudrate >= clk/(2*clkdiv) {
-		encdiv = 2
-		bestbaud = clk / (2 * clkdiv)
-	} else {
-		/* We divide by 16 to have 3 fractional bits and one bit for rounding */
-		divisor = clk * 16 / clkdiv / baudrate
-		/* Decide if to round up or down*/
-		if divisor&1 != 0 {
-			bestdiv = divisor/2 + 1
-		} else {
-			bestdiv = divisor / 2
-		}
-		if bestdiv > 0x20000 {
-			bestdiv = 0x1ffff
-		}
-		bestbaud = clk * 16 / clkdiv / bestdiv
-		/* Decide if to round up or down*/
-		if bestbaud&1 != 0 {
-			bestbaud = bestbaud/2 + 1
-		} else {
-			bestbaud = bestbaud / 2
-		}
-		encdiv = uint32(bestdiv)>>3 | uint32(frac_code[bestdiv&0x7])<<14
-	}
-	return
-}
-
 func checkErr(err error) {
 	if err == nil {
 		return
 	}
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
+}
+
+func read(r io.Reader, in []byte) {
+	os.Stdout.Write([]byte{'r'})
+	_, err := io.ReadFull(r, in)
+	checkErr(err)
 }
 
 func main() {
@@ -61,43 +31,48 @@ func main() {
 
 	// Baudrate for synchronous bitbang mode.
 	//
-	// FT232R max baudrate is 3 MBaud, USB speed is 12 Mb/s = 1500 kB/s..
-	// In best case: 1308 kB/s fdata + 192 kB/s overhead.
-	// Theoretical max USB continuous baudrate in one direction: 1308 kBaud
+	// FT232R max baudrate is 3 MBaud but in bitbang mode it is additionally
+	// limited by USB speed.
 	//
-	// FT232R has 256 B USB Tx buffer and 128 B USB Rx buffer. This is much
-	// less than max. 8192 B USB packet so in case of sync bit bang this
-	// limits max speed.
+	// USB full speed is:
+	//     19*64 B / 1ms = 1216000 B/s.
+	// Theoretical max. continuous sync bitbang baudrate is:
+	//     (1216000 - 2*overhead) Baud / 2 = (608000 - overhead) Baud
+	//
+	// TODO: Calculate overhead.
+	//
+	// FT232R has 256 B Tx buffer (for sending to USB host) and 128 B Rx buffer
+	// (for receiving from USB host). So if the long term baudrate isn't exceed,
+	// the short term (burst) baudrate (for no more than 256 symbols) can be
+	// up to (1216000 - overhead) Baud.
 
-	const cs = 8192
-	const br = 2 * 256 * 1024 / 16
+	const cs = 64 * 1024
+	const br = 65580 * 16
 	checkErr(ft.SetReadChunkSize(cs))
 	checkErr(ft.SetWriteChunkSize(cs))
 	checkErr(ft.SetLatencyTimer(2))
-	checkErr(ft.SetBaudrate(br))
+	checkErr(ft.SetBaudrate(br / 16))
 
 	checkErr(ft.PurgeBuffers())
 
-	data := make([]byte, cs)
-	const count = 20
+	in := make([]byte, cs)
+	out := make([]byte, cs)
+	const count = 10
+
 	t1 := time.Now()
 	for i := 0; i < count; i++ {
-		// Schedule read before Write to improve speed.
-		go func() {
-			_, err = io.ReadFull(ft, data)
-			checkErr(err)
-		}()
-		_, err := ft.Write(data)
+		go read(ft, in)
+		// Uncoment following line to see speed for reverse order.
+		//time.Sleep(time.Microsecond)
+		os.Stdout.Write([]byte{'w'})
+		_, err := ft.Write(out)
 		checkErr(err)
 	}
 	t2 := time.Now()
-	realbaud, encdiv := clkbits(br*4, 48e6, 16)
-	div := encdiv & 0xffff
-	frac := encdiv >> 16
+
 	fmt.Println(
-		"br =", br*16,
-		"mes =", int64(len(data))*count*int64(time.Second)/int64(t2.Sub(t1)),
-		"cfg =", realbaud, div, frac,
+		"\nbr =", br,
+		"mes =", cs*count*int64(time.Second)/int64(t2.Sub(t1)),
 	)
 	return
 }
