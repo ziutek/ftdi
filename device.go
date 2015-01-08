@@ -425,6 +425,24 @@ func (d *Device) Write(data []byte) (int, error) {
 	return int(n), nil
 }
 
+// Write writes bytes from string s to device. It retruns number of bytes written.
+func (d *Device) WriteString(s string) (int, error) {
+	// BUG: This will cause problems when string implementation changes.
+	type stringHeader struct {
+		data unsafe.Pointer
+		len  int
+	}
+	n := C.ftdi_write_data(
+		d.ctx,
+		(*C.uchar)((*stringHeader)(unsafe.Pointer(&s)).data),
+		C.int(len(s)),
+	)
+	if n < 0 {
+		return 0, d.makeError(n)
+	}
+	return int(n), nil
+}
+
 // ReadByte reads one byte from device.
 func (d *Device) ReadByte() (byte, error) {
 	var b byte
@@ -440,6 +458,14 @@ func (d *Device) WriteByte(b byte) error {
 		return d.makeError(n)
 	}
 	return nil
+}
+
+// Pins returns current state of pins (circumventing the read buffer).
+func (d *Device) Pins() (b byte, err error) {
+	if e := C.ftdi_read_pins(d.ctx, (*C.uchar)(&b)); e != 0 {
+		err = d.makeError(e)
+	}
+	return
 }
 
 // SetBaudrate sets the rate of data transfer.
