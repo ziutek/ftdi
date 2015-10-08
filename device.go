@@ -7,7 +7,7 @@ package ftdi
 
 //#cgo pkg-config: libftdi1
 #cgo CFLAGS: -I/usr/local/include/libftdi1 -I/usr/include/libusb-1.0
-#cgo LDFLAGS: /usr/local/lib/libftdi1.a -lusb-1.0 -ludev -pthread
+#cgo LDFLAGS: /usr/local/lib/libftdi1.a /usr/lib/x86_64-linux-gnu/libusb-1.0.a -ludev -pthread
 */
 import "C"
 
@@ -35,7 +35,16 @@ type USBDev struct {
 }
 
 func (u *USBDev) unref() {
+	if u.d == nil {
+		panic("USBDev.unref on uninitialized device")
+	}
 	C.libusb_unref_device(u.d)
+	u.d = nil // Help GC.
+}
+
+func (u *USBDev) Close() {
+	runtime.SetFinalizer(u, nil)
+	u.unref()
 }
 
 func getStringDescriptor(dh *C.libusb_device_handle, id C.uint8_t) (string, error) {
@@ -87,8 +96,6 @@ func (u *USBDev) getStrings(dev *C.libusb_device, ds *C.struct_libusb_device_des
 	return err
 }
 
-// FindAll search for all USB devices with specified vendor and  product id.
-// It returns slice od found devices.
 /*func FindAll(vendor, product int) ([]*USBDev, error) {
 	ctx := new(C.struct_ftdi_context)
 	e := C.ftdi_init(ctx)
@@ -114,17 +121,17 @@ func (u *USBDev) getStrings(dev *C.libusb_device, ds *C.struct_libusb_device_des
 		u.d = el.dev
 		C.libusb_ref_device(el.dev)
 		runtime.SetFinalizer(u, (*USBDev).unref)
-
 		if err := u.getStrings(ctx); err != nil {
 			return nil, err
 		}
-
 		ret[i] = u
 		i++
 	}
 	return ret, nil
 }*/
 
+// FindAll search for all USB devices with specified vendor and  product id.
+// It returns slice od found devices.
 func FindAll(vendor, product int) ([]*USBDev, error) {
 	if e := C.libusb_init(nil); e != 0 {
 		return nil, USBError(e)
@@ -218,37 +225,45 @@ func (d *Device) Type() Type {
 	return Type(d.ctx._type)
 }
 
-func makeDevice(c Channel) (*Device, error) {
-	d := new(Device)
-	d.ctx = new(C.struct_ftdi_context)
-	if e := C.ftdi_init(d.ctx); e < 0 {
-		defer d.deinit()
-		return nil, d.makeError(e)
+func (d *Device) free() {
+	if d.ctx == nil {
+		panic("Device.free on uninitialized device")
 	}
-	if c != ChannelAny {
-		if e := C.ftdi_set_interface(d.ctx, C.enum_ftdi_interface(c)); e < 0 {
-			defer d.deinit()
-			return nil, d.makeError(e)
-		}
-	}
-	runtime.SetFinalizer(d, (*Device).Close)
-	return d, nil
-}
-
-func (d *Device) deinit() {
-	C.ftdi_deinit(d.ctx)
+	C.ftdi_free(d.ctx)
+	d.ctx = nil
 }
 
 func (d *Device) makeError(code C.int) error {
 	return makeError(d.ctx, code)
 }
 
+func (d *Device) close() error {
+	defer d.free()
+	if e := C.ftdi_usb_close(d.ctx); e != 0 {
+		return d.makeError(e)
+	}
+	return nil
+}
+
 // Close closes device
 func (d *Device) Close() error {
-	defer d.deinit()
-	e := C.ftdi_usb_close(d.ctx)
 	runtime.SetFinalizer(d, nil)
-	return d.makeError(e)
+	return d.close()
+}
+
+func makeDevice(c Channel) (*Device, error) {
+	ctx, err := C.ftdi_new()
+	if ctx == nil {
+		return nil, err
+	}
+	d := &Device{ctx}
+	if c != ChannelAny {
+		if e := C.ftdi_set_interface(d.ctx, C.enum_ftdi_interface(c)); e < 0 {
+			defer d.free()
+			return nil, d.makeError(e)
+		}
+	}
+	return d, nil
 }
 
 // Channel represents channel (interface) of FTDI device. Some devices have more
@@ -271,9 +286,10 @@ func OpenUSBDev(u *USBDev, c Channel) (*Device, error) {
 		return nil, err
 	}
 	if e := C.ftdi_usb_open_dev(d.ctx, u.d); e < 0 {
-		defer d.deinit()
+		defer d.free()
 		return nil, d.makeError(e)
 	}
+	runtime.SetFinalizer(d, (*Device).close)
 	return d, nil
 }
 
@@ -285,9 +301,10 @@ func OpenFirst(vendor, product int, c Channel) (*Device, error) {
 		return nil, err
 	}
 	if e := C.ftdi_usb_open(d.ctx, C.int(vendor), C.int(product)); e < 0 {
-		defer d.deinit()
+		defer d.free()
 		return nil, d.makeError(e)
 	}
+	runtime.SetFinalizer(d, (*Device).close)
 	return d, nil
 }
 
@@ -300,7 +317,6 @@ func Open(vendor, product int, description, serial string, index uint,
 	if err != nil {
 		return nil, err
 	}
-
 	descr := C.CString(description)
 	defer C.free(unsafe.Pointer(descr))
 	ser := C.CString(serial)
@@ -313,9 +329,10 @@ func Open(vendor, product int, description, serial string, index uint,
 		C.uint(index),
 	)
 	if e < 0 {
-		defer d.deinit()
+		defer d.free()
 		return nil, d.makeError(e)
 	}
+	runtime.SetFinalizer(d, (*Device).close)
 	return d, nil
 }
 
