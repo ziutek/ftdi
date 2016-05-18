@@ -24,7 +24,7 @@ func main() {
 			hexSerial += fmt.Sprintf("%02x", u.Serial[i])
 		}
 		fmt.Printf(
-			"%d: '%s' '%s' '%s'=%s",
+			"#%d Manufacturer:'%s' Description:'%s' Serial:'%s'=%s",
 			i, u.Manufacturer, u.Description, u.Serial, hexSerial,
 		)
 		d, err := ftdi.OpenUSBDev(u, ftdi.ChannelAny)
@@ -36,7 +36,7 @@ func main() {
 		if d.Type() == ftdi.TypeR {
 			cid, err := d.ChipID()
 			if err == nil {
-				fmt.Printf(" 0x%08x\n", cid)
+				fmt.Printf(" ChipID:0x%08x\n", cid)
 			} else {
 				fmt.Printf("[can't read ChipID: %s]\n", err)
 			}
