@@ -6,8 +6,8 @@ package ftdi
 #include <libusb.h>
 
 //#cgo pkg-config: libftdi1
-#cgo CFLAGS: -I/usr/local/include/libftdi1 -I/usr/include/libusb-1.0
-#cgo LDFLAGS: /usr/local/lib/libftdi1.a /usr/lib/x86_64-linux-gnu/libusb-1.0.a -ludev -pthread
+#cgo CFLAGS: -I/usr/local/include/libftdi1 -I/usr/include/libftdi1 -I/usr/include/libusb-1.0
+#cgo LDFLAGS: -L/usr/local/lib -lftdi1 -lusb-1.0 -pthread
 */
 import "C"
 
