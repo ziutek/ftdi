@@ -5,9 +5,9 @@ package ftdi
 #include <ftdi.h>
 #include <libusb.h>
 
-//#cgo pkg-config: libftdi1
-#cgo CFLAGS: -I/usr/local/include/libftdi1 -I/usr/include/libusb-1.0
-#cgo LDFLAGS: /usr/local/lib/libftdi1.a /usr/lib/x86_64-linux-gnu/libusb-1.0.a -ludev -pthread
+#cgo pkg-config: libftdi1
+//#cgo CFLAGS: -I/usr/local/include/libftdi1 -I/usr/include/libusb-1.0
+//#cgo LDFLAGS: /usr/local/lib/libftdi1.a /usr/lib/x86_64-linux-gnu/libusb-1.0.a -ludev -pthread
 */
 import "C"
 
@@ -47,10 +47,25 @@ func (u *USBDev) Close() {
 	u.unref()
 }
 
-func getStringDescriptor(dh *C.libusb_device_handle, id C.uint8_t) (string, error) {
+func getLangId(dh *C.libusb_device_handle) (C.uint16_t, error) {
 	var buf [128]C.char
 	e := C.libusb_get_string_descriptor(
-		dh, id, 0,
+		dh, 0, 0,
+		(*C.uchar)(unsafe.Pointer(&buf[0])), C.int(len(buf)),
+	)
+	if e < 0 {
+		return 0, USBError(e)
+	}
+	if e < 4 {
+		return 0, errors.New("not enough data in USB language IDs descriptor")
+	}
+	return C.uint16_t(uint(buf[2]) | uint(buf[3])<<8), nil
+}
+
+func getStringDescriptor(dh *C.libusb_device_handle, id C.uint8_t, langid C.uint16_t) (string, error) {
+	var buf [128]C.char
+	e := C.libusb_get_string_descriptor(
+		dh, id, C.uint16_t(langid),
 		(*C.uchar)(unsafe.Pointer(&buf[0])), C.int(len(buf)),
 	)
 	if e < 0 {
@@ -69,7 +84,6 @@ func getStringDescriptor(dh *C.libusb_device_handle, id C.uint8_t) (string, erro
 		uni16[i] = uint16(b[i*2]) | uint16(b[i*2+1])<<8
 	}
 	return string(utf16.Decode(uni16)), nil
-
 }
 
 // getStrings updates Manufacturer, Description, Serial strings descriptors
@@ -84,15 +98,19 @@ func (u *USBDev) getStrings(dev *C.libusb_device, ds *C.struct_libusb_device_des
 		return USBError(e)
 	}
 	defer C.libusb_close(dh)
-	u.Manufacturer, err = getStringDescriptor(dh, ds.iManufacturer)
+	langid, err := getLangId(dh)
 	if err != nil {
 		return err
 	}
-	u.Description, err = getStringDescriptor(dh, ds.iProduct)
+	u.Manufacturer, err = getStringDescriptor(dh, ds.iManufacturer, langid)
 	if err != nil {
 		return err
 	}
-	u.Serial, err = getStringDescriptor(dh, ds.iSerialNumber)
+	u.Description, err = getStringDescriptor(dh, ds.iProduct, langid)
+	if err != nil {
+		return err
+	}
+	u.Serial, err = getStringDescriptor(dh, ds.iSerialNumber, langid)
 	return err
 }
 
