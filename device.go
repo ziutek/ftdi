@@ -525,6 +525,83 @@ func (d *Device) SetBaudrate(br int) error {
 	return d.makeError(C.ftdi_set_baudrate(d.ctx, C.int(br)))
 }
 
+// Parity represents the parity mode
+type Parity int
+
+const (
+	// ParityNone indicates no parity bit is used
+	ParityNone Parity = C.NONE
+	// ParityOdd indicates an odd parity bit is used
+	ParityOdd Parity = C.ODD
+	// ParityEven indicates an even parity bit is used
+	ParityEven Parity = C.EVEN
+	// ParityMark indicates that the parity bit should be a 1
+	ParityMark Parity = C.MARK
+	// ParitySpace indicates that the parity bit should be a 0
+	ParitySpace Parity = C.SPACE
+)
+
+// DataBits represents the number of data bits to expect
+type DataBits int
+
+const (
+	// DataBits7 indicates that 7 data bits are used
+	DataBits7 DataBits = C.BITS_7
+	// DataBits8 indicates that 8 data bits are used
+	DataBits8 DataBits = C.BITS_8
+)
+
+// StopBits represents the number of stop bits to expect
+type StopBits int
+
+const (
+	// StopBits1 indicates only one stop bit is expected
+	StopBits1 StopBits = C.STOP_BIT_1
+	// StopBits15 indicates one and a half stop bits are expected
+	StopBits15 StopBits = C.STOP_BIT_15
+	// StopBits2 indicates two stop bits are expected
+	StopBits2 StopBits = C.STOP_BIT_2
+)
+
+// Break represents the break mode
+type Break int
+
+const (
+	// BreakOff disables the use of a break signal
+	BreakOff Break = C.BREAK_OFF
+	// BreakOn enables the use of a break signal
+	BreakOn Break = C.BREAK_ON
+)
+
+// SetLineProperties sets the uart data bit count, stop bits count, and parity mode
+func (d *Device) SetLineProperties(bits DataBits, stopbits StopBits, parity Parity) error {
+	e := C.ftdi_set_line_property(
+		d.ctx,
+		uint32(bits),
+		uint32(stopbits),
+		uint32(parity),
+	)
+	return d.makeError(e)
+}
+
+// SetLineProperties2 sets the uart data bit count, stop bits count, parity mode,
+// and break usage
+func (d *Device) SetLineProperties2(bits DataBits, stopbits StopBits, parity Parity, breaks Break) error {
+	e := C.ftdi_set_line_property2(
+		d.ctx,
+		uint32(bits),
+		uint32(stopbits),
+		uint32(parity),
+		uint32(breaks),
+	)
+	return d.makeError(e)
+}
+
+// SetFlowControl sets the flow control parameter
+func (d *Device) SetFlowControl(flowctrl int) error {
+	return d.makeError(C.ftdi_setflowctrl(d.ctx, C.int(flowctrl)))
+}
+
 // ChipID reads FTDI Chip-ID (not all devices support this).
 func (d *Device) ChipID() (uint32, error) {
 	var id C.uint
