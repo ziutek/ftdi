@@ -597,8 +597,22 @@ func (d *Device) SetLineProperties2(bits DataBits, stopbits StopBits, parity Par
 	return d.makeError(e)
 }
 
+// FlowCtrl represents the flow control mode.
+type FlowCtrl int
+
+const (
+	// FlowCtrlDisable disables all automatic flow control.
+	FlowCtrlDisable FlowCtrl = (1 << iota) >> 1
+	// FlowCtrlRTSCTS enables RTS CTS flow control.
+	FlowCtrlRTSCTS
+	// FlowCtrlDTRDSR enables DTR DSR flow control.
+	FlowCtrlDTRDSR
+	// FlowCtrlXONXOFF enables XON XOF flow control.
+	FlowCtrlXONXOFF
+)
+
 // SetFlowControl sets the flow control parameter
-func (d *Device) SetFlowControl(flowctrl int) error {
+func (d *Device) SetFlowControl(flowctrl FlowCtrl) error {
 	return d.makeError(C.ftdi_setflowctrl(d.ctx, C.int(flowctrl)))
 }
 
