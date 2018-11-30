@@ -370,7 +370,7 @@ const (
 )
 
 // SetBitmode sets operation mode for device d to mode. iomask bitmask
-// configres lines corresponding to its bits as input (bit=0) or outpur (bit=1).
+// configures lines corresponding to its bits as input (bit=0) or output (bit=1).
 func (d *Device) SetBitmode(iomask byte, mode Mode) error {
 	e := C.ftdi_set_bitmode(d.ctx, C.uchar(iomask), C.uchar(mode))
 	return d.makeError(e)
@@ -381,12 +381,12 @@ func (d *Device) Reset() error {
 	return d.makeError(C.ftdi_usb_reset(d.ctx))
 }
 
-// PurgeRxBuffer clears Rx buffer (buffer for data received from USB?).
+// PurgeWriteBuffer clears Rx buffer (buffer for data received from USB?).
 func (d *Device) PurgeWriteBuffer() error {
 	return d.makeError(C.ftdi_usb_purge_rx_buffer(d.ctx))
 }
 
-// PurgeTxBuffer clears Tx buffer (buffer for data that will be sended to USB?).
+// PurgeReadBuffer clears Tx buffer (buffer for data that will be sent to USB?).
 func (d *Device) PurgeReadBuffer() error {
 	return d.makeError(C.ftdi_usb_purge_tx_buffer(d.ctx))
 }
@@ -430,7 +430,7 @@ func (d *Device) LatencyTimer() (int, error) {
 }
 
 // SetLatencyTimer sets latency timer to lt (value beetwen 1 and 255). If FTDI
-// device has fewer data to completelly fill one USB packet (<62 B) it waits for
+// device has fewer data to completely fill one USB packet (<62 B) it waits for
 // lt ms before sending data to USB.
 func (d *Device) SetLatencyTimer(lt int) error {
 	return d.makeError(C.ftdi_set_latency_timer(d.ctx, C.uchar(lt)))
@@ -462,7 +462,7 @@ func (d *Device) Write(data []byte) (int, error) {
 	return int(n), nil
 }
 
-// Write writes bytes from string s to device. It retruns number of bytes written.
+// WriteString writes bytes from string s to device. It retruns number of bytes written.
 func (d *Device) WriteString(s string) (int, error) {
 	// BUG: This will cause problems when string implementation changes.
 	type stringHeader struct {
@@ -507,7 +507,7 @@ func (d *Device) Pins() (b byte, err error) {
 
 // SetBaudrate sets the rate of data transfer.
 //
-// For standard USB-UART adapter it sets UART boudrate.
+// For standard USB-UART adapter it sets UART baudrate.
 //
 // For bitbang mode the clock is actually 16 times the br. From the FTDI
 // documentation for FT232R bitbang mode:
