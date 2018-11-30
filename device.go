@@ -597,9 +597,41 @@ func (d *Device) SetLineProperties2(bits DataBits, stopbits StopBits, parity Par
 	return d.makeError(e)
 }
 
+// FlowCtrl represents the flow control mode.
+type FlowCtrl int
+
+const (
+	// FlowCtrlDisable disables all automatic flow control.
+	FlowCtrlDisable FlowCtrl = (1 << iota) >> 1
+	// FlowCtrlRTSCTS enables RTS CTS flow control.
+	FlowCtrlRTSCTS
+	// FlowCtrlDTRDSR enables DTR DSR flow control.
+	FlowCtrlDTRDSR
+	// FlowCtrlXONXOFF enables XON XOF flow control.
+	FlowCtrlXONXOFF
+)
+
 // SetFlowControl sets the flow control parameter
-func (d *Device) SetFlowControl(flowctrl int) error {
+func (d *Device) SetFlowControl(flowctrl FlowCtrl) error {
 	return d.makeError(C.ftdi_setflowctrl(d.ctx, C.int(flowctrl)))
+}
+
+// SetDTRRTS manually sets the DTR and RTS output lines from the
+// least significant bit of dtr and rts.
+func (d *Device) SetDTRRTS(dtr, rts int) error {
+	return d.makeError(C.ftdi_setdtr_rts(d.ctx, C.int(dtr&1), C.int(rts&1)))
+}
+
+// SetDTR manually sets the DTR output line from the least significant
+// bit of dtr.
+func (d *Device) SetDTR(dtr int) error {
+	return d.makeError(C.ftdi_setdtr(d.ctx, C.int(dtr&1)))
+}
+
+// SetRTS manually sets the RTS output line from the least significant
+// bit of rts.
+func (d *Device) SetRTS(rts int) error {
+	return d.makeError(C.ftdi_setrts(d.ctx, C.int(rts&1)))
 }
 
 // ChipID reads FTDI Chip-ID (not all devices support this).
