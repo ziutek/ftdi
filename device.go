@@ -276,7 +276,7 @@ func makeDevice(c Channel) (*Device, error) {
 	}
 	d := &Device{ctx}
 	if c != ChannelAny {
-		if e := C.ftdi_set_interface(d.ctx, C.enum_ftdi_interface(c)); e < 0 {
+		if e := C.ftdi_set_interface(d.ctx, uint32(c)); e < 0 {
 			defer d.free()
 			return nil, d.makeError(e)
 		}
