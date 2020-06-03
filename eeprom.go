@@ -191,7 +191,7 @@ func (e EEPROM) channelValue(names []C.enum_ftdi_eeprom_value, c Channel) (
 	if n < 0 || n >= len(names) {
 		panic("bad channel")
 	}
-	C.ftdi_get_eeprom_value(e.d.ctx, names[n], &v)
+	C.ftdi_get_eeprom_value(e.d.ctx, uint32(names[n]), &v)
 	return
 }
 
@@ -202,7 +202,7 @@ func (e EEPROM) setChannelValue(names []C.enum_ftdi_eeprom_value, c Channel,
 	if n < 0 || n >= len(names) {
 		panic("bad channel")
 	}
-	C.ftdi_set_eeprom_value(e.d.ctx, names[n], v)
+	C.ftdi_set_eeprom_value(e.d.ctx, uint32(names[n]), v)
 }
 
 type ChannelType byte
@@ -355,7 +355,7 @@ func (e EEPROM) CBusFunction(n int) CBusFunction {
 		panic("bad CBUS number")
 	}
 	var v C.int
-	C.ftdi_get_eeprom_value(e.d.ctx, cbusFunction[n], &v)
+	C.ftdi_get_eeprom_value(e.d.ctx, uint32(cbusFunction[n]), &v)
 	return CBusFunction(v)
 }
 
@@ -363,7 +363,7 @@ func (e EEPROM) SetCBusFunction(n int, v CBusFunction) {
 	if n < 0 || n >= len(cbusFunction) {
 		panic("bad CBUS number")
 	}
-	C.ftdi_set_eeprom_value(e.d.ctx, cbusFunction[n], C.int(v))
+	C.ftdi_set_eeprom_value(e.d.ctx, uint32(cbusFunction[n]), C.int(v))
 }
 
 func (e EEPROM) Invert() int {

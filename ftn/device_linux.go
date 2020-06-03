@@ -104,9 +104,6 @@ func (c *Conn) Serial() (string, error) {
 	return bytes0str(buf), nil
 }
 
-func 
-
-
 /*type Mode byte
 
 const (

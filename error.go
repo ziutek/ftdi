@@ -21,5 +21,5 @@ func (e *Error) Error() string {
 type USBError int
 
 func (e USBError) Error() string {
-	return C.GoString(C.libusb_strerror(C.enum_libusb_error(e)))
+	return C.GoString(C.libusb_strerror(int32(e)))
 }
