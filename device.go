@@ -228,7 +228,7 @@ const (
 	Type230x
 )
 
-var types = []string{"AM", "BM", "2232C", "R", "2232H", "4232H", "232H"}
+var types = []string{"AM", "BM", "2232C", "R", "2232H", "4232H", "232H", "230X"}
 
 // String returns text name that describes type id.
 func (t Type) String() string {
