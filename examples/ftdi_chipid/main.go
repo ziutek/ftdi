@@ -15,7 +15,7 @@ func checkErr(err error) {
 
 func main() {
 
-	l, err := ftdi.FindAll(0x0403, 0x6001)
+	l, err := ftdi.FindAll(0, 0)
 	checkErr(err)
 
 	for i, u := range l {
@@ -24,7 +24,7 @@ func main() {
 			hexSerial += fmt.Sprintf("%02x", u.Serial[i])
 		}
 		fmt.Printf(
-			"#%d Manufacturer:'%s' Description:'%s' Serial:'%s'=%s",
+			"#%d Manufacturer:'%s' Description:'%s' Serial:'%s' (%s)",
 			i, u.Manufacturer, u.Description, u.Serial, hexSerial,
 		)
 		d, err := ftdi.OpenUSBDev(u, ftdi.ChannelAny)

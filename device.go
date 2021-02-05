@@ -383,17 +383,17 @@ func (d *Device) Reset() error {
 
 // PurgeWriteBuffer clears Rx buffer (buffer for data received from USB?).
 func (d *Device) PurgeWriteBuffer() error {
-	return d.makeError(C.ftdi_usb_purge_rx_buffer(d.ctx))
+	return d.makeError(C.ftdi_tciflush(d.ctx))
 }
 
 // PurgeReadBuffer clears Tx buffer (buffer for data that will be sent to USB?).
 func (d *Device) PurgeReadBuffer() error {
-	return d.makeError(C.ftdi_usb_purge_tx_buffer(d.ctx))
+	return d.makeError(C.ftdi_tcoflush(d.ctx))
 }
 
 // PurgeBuffers clears both (Tx and Rx) buffers.
 func (d *Device) PurgeBuffers() error {
-	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
+	return d.makeError(C.ftdi_tcioflush(d.ctx))
 }
 
 // ReadChunkSize returns current value of read buffer chunk size.
