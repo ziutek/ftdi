@@ -1,0 +1,19 @@
+
+You need to install libusb Windows backend supported drivers 
+in order to use libftdi1 under Windows. You can usesing Zadig 
+from the libwdi project to do that. 
+ Zadig: http://zadig.akeo.ie/
+
+In general, you should use WinUSB driver since it is the best
+supported by libusb Windows backend. You should avoid
+using libusb0.sys as it is not well supported by libusb
+Windows backend yet. 
+
+libusbk is usable as well if you want to use libusb-win32 along 
+with libusb-1.0 Windows.
+
+You can also try usbdk which is not as mature as WinUSB but
+it offers an advantage that you can use it along with the
+default FTDI vendor driver (eg: VCP serial port and D2XX function).
+
+
