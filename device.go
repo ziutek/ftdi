@@ -201,9 +201,7 @@ func FindAll(vendor, product int) ([]*USBDev, error) {
 		u.d = devs[i]
 		C.libusb_ref_device(u.d)
 		runtime.SetFinalizer(u, (*USBDev).unref)
-		if err := u.getStrings(u.d, ds); err != nil {
-			return nil, err
-		}
+		u.getStrings(u.d, ds)
 		ret[n] = u
 		n++
 	}
