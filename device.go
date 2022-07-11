@@ -9,6 +9,33 @@ package ftdi
 #cgo windows LDFLAGS: ${SRCDIR}/libftdi1-1.5/lib64/libftdi1.a ${SRCDIR}/libftdi1-1.5/lib64/libusb-1.0.a
 #cgo linux pkg-config: libftdi1
 #cgo darwin pkg-config: libftdi1
+
+// libftdi 1.5 deprecated the purge API.  Use a wrapper to avoid the
+// deprecation warnings while still supporting 1.4.
+int libftdi_tciflush(struct ftdi_context *ftdi) {
+#ifdef SIO_TCIFLUSH
+	return ftdi_tciflush(ftdi);
+#else
+	return ftdi_usb_purge_rx_buffer(ftdi);
+#endif
+}
+
+int libftdi_tcoflush(struct ftdi_context *ftdi) {
+#ifdef SIO_TCIFLUSH
+	return ftdi_tcoflush(ftdi);
+#else
+	return ftdi_usb_purge_tx_buffer(ftdi);
+#endif
+}
+
+int libftdi_tcioflush(struct ftdi_context *ftdi) {
+#ifdef SIO_TCIFLUSH
+	return ftdi_tcioflush(ftdi);
+#else
+	return ftdi_usb_purge_buffers(ftdi);
+#endif
+}
+
 */
 import "C"
 
@@ -382,17 +409,17 @@ func (d *Device) Reset() error {
 
 // PurgeWriteBuffer clears Rx buffer (buffer for data received from USB?).
 func (d *Device) PurgeWriteBuffer() error {
-	return d.makeError(C.ftdi_usb_purge_rx_buffer(d.ctx))
+	return d.makeError(C.libftdi_tciflush(d.ctx))
 }
 
 // PurgeReadBuffer clears Tx buffer (buffer for data that will be sent to USB?).
 func (d *Device) PurgeReadBuffer() error {
-	return d.makeError(C.ftdi_usb_purge_tx_buffer(d.ctx))
+	return d.makeError(C.libftdi_tcoflush(d.ctx))
 }
 
 // PurgeBuffers clears both (Tx and Rx) buffers.
 func (d *Device) PurgeBuffers() error {
-	return d.makeError(C.ftdi_usb_purge_buffers(d.ctx))
+	return d.makeError(C.libftdi_tcioflush(d.ctx))
 }
 
 // ReadChunkSize returns current value of read buffer chunk size.
