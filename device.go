@@ -395,6 +395,52 @@ const (
 	ModeFT1284
 )
 
+const (
+	MPSSEWriteNeg           byte = C.MPSSE_WRITE_NEG
+	MPSSEBitMode            byte = C.MPSSE_BITMODE
+	MPSSEReadNeg            byte = C.MPSSE_READ_NEG
+	MPSSELSB                byte = C.MPSSE_LSB
+	MPSSEDoWrite            byte = C.MPSSE_DO_WRITE
+	MPSSEDoRead             byte = C.MPSSE_DO_READ
+	MPSSEWriteTMS           byte = C.MPSSE_WRITE_TMS
+	MPSSESetBitsLow         byte = C.SET_BITS_LOW
+	MPSSESetBitsHigh        byte = C.SET_BITS_HIGH
+	MPSSEGetBitsLow         byte = C.GET_BITS_LOW
+	MPSSELoopbackStart      byte = C.LOOPBACK_START
+	MPSSELoopbackEnd        byte = C.LOOPBACK_END
+	MPSSETCKDivisor         byte = C.TCK_DIVISOR
+	MPSSEDisableDiv5        byte = C.DIS_DIV_5
+	MPSSEEnableDiv5         byte = C.EN_DIV_5
+	MPSSEEnable3Phase       byte = C.EN_3_PHASE
+	MPSSEDisable3Phase      byte = C.DIS_3_PHASE
+	MPSSEClockBits          byte = C.CLK_BITS
+	MPSSEClockBytes         byte = C.CLK_BYTES
+	MPSSEClockWaitHigh      byte = C.CLK_WAIT_HIGH
+	MPSSEClockWaitLow       byte = C.CLK_WAIT_LOW
+	MPSSEEnableAdaptive     byte = C.EN_ADAPTIVE
+	MPSSEDisableAdaptive    byte = C.DIS_ADAPTIVE
+	MPSSEClockBytesOrHigh   byte = C.CLK_BYTES_OR_HIGH
+	MPSSEClockBytesOrLow    byte = C.CLK_BYTES_OR_LOW
+	MPSSEDriveOpenCollector byte = C.DRIVE_OPEN_COLLECTOR
+	MPSSESendImmediate      byte = C.SEND_IMMEDIATE
+	MPSSEWaitOnHigh         byte = C.WAIT_ON_HIGH
+	MPSSEWaitOnLow          byte = C.WAIT_ON_LOW
+	MPSSEReadShort          byte = C.READ_SHORT
+	MPSSEReadExtended       byte = C.READ_EXTENDED
+	MPSSEWriteShort         byte = C.WRITE_SHORT
+	MPSSEWriteExtended      byte = C.WRITE_EXTENDED
+)
+
+func MPSSEDivValue(rate int) int {
+	if rate <= 0 || rate > 60000000 {
+		return 0
+	}
+	if (60000000/rate)-1 > 0xffff {
+		return 0xffff
+	}
+	return 60000000/rate - 1
+}
+
 // SetBitmode sets operation mode for device d to mode. iomask bitmask
 // configures lines corresponding to its bits as input (bit=0) or output (bit=1).
 func (d *Device) SetBitmode(iomask byte, mode Mode) error {
