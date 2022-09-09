@@ -431,14 +431,22 @@ const (
 	MPSSEWriteExtended      byte = C.WRITE_EXTENDED
 )
 
-func MPSSEDivValue(rate int) int {
-	if rate <= 0 || rate > 60000000 {
+// MPSSEDivValue calculate the two bytes that are required to be supplied after
+// MPSSETCKDivisor to get the desired clock speed (in Hz).
+// Set the dvi5 flag is MPSSEEnableDiv5 has been sent, to use a 12MHz base clock,
+// instead of 60MHz.
+func MPSSEDivValue(rate int, div5 bool) int {
+	clk := 60_000_000
+	if div5 {
+		clk /= 5
+	}
+	if rate <= 0 || rate > clk {
 		return 0
 	}
-	if (60000000/rate)-1 > 0xffff {
+	if (clk/rate)-1 > 0xffff {
 		return 0xffff
 	}
-	return 60000000/rate - 1
+	return clk/rate - 1
 }
 
 // SetBitmode sets operation mode for device d to mode. iomask bitmask
