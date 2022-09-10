@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	d, err := ftdi.OpenFirst(0x0403, 0x6001, ftdi.ChannelAny)
+	d, err := ftdi.OpenFirst(0x0403, 0x6011, ftdi.ChannelA)
 	if err != nil {
 		log.Fatalf("Unable to open FTDI device: %s", err)
 	}
@@ -28,20 +28,21 @@ func main() {
 	// We want a 3MHz clock, and we're not dividing down the 60MHz clock
 	speed := ftdi.MPSSEDivValue(3_000_000, false)
 
-	// Channel A should start off as all CS high
+	// Set up the SPI Bus - all the pins will be idle high
 	mpsse_commands := []byte{
 		ftdi.MPSSEDisableDiv5, // Disable /5 divisor to use the 60MHz clock
 		ftdi.MPSSETCKDivisor,  // set the clock divisor
 		byte(speed & 0xff),    // low byte of clock rate
 		byte(speed >> 8),      // high byte of clock rate
-		ftdi.MPSSESetBitsLow,  // set pins to low
-		outputs,               // which pins the output pins
-		outputs,               // set their state
+		ftdi.MPSSESetBitsLow,  // set low-bit values
+		outputs,               // What values to set (all 1)
+		outputs,               // Which pins to apply the above values to
 	}
 	if _, err := d.Write(mpsse_commands); err != nil {
 		log.Fatalf("Unable to write MPSSE commands: %s", err)
 	}
-	tx_data := []byte{1, 2, 3, 4}
+	tx_data := []byte{1, 2, 3, 4} // Data bytes to appears on the SPI bus
+
 	xfer := []byte{
 		ftdi.MPSSESetBitsLow,
 		^(cs | clk), // Set all outputs except the chipselect & clock to be high

@@ -395,6 +395,9 @@ const (
 	ModeFT1284
 )
 
+// MPSSE commands
+// See https://www.ftdichip.com/Documents/AppNotes/AN_108_Command_Processor_for_MPSSE_and_MCU_Host_Bus_Emulation_Modes.pdf
+// for full details
 const (
 	MPSSEWriteNeg           byte = C.MPSSE_WRITE_NEG
 	MPSSEBitMode            byte = C.MPSSE_BITMODE
@@ -431,7 +434,7 @@ const (
 	MPSSEWriteExtended      byte = C.WRITE_EXTENDED
 )
 
-// MPSSEDivValue calculate the two bytes that are required to be supplied after
+// MPSSEDivValue calculates the two bytes that are required to be supplied after
 // MPSSETCKDivisor to get the desired clock speed (in Hz).
 // Set the dvi5 flag is MPSSEEnableDiv5 has been sent, to use a 12MHz base clock,
 // instead of 60MHz.
