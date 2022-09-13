@@ -436,7 +436,7 @@ const (
 
 // MPSSEDivValue calculates the two bytes that are required to be supplied after
 // MPSSETCKDivisor to get the desired clock speed (in Hz).
-// Set the dvi5 flag is MPSSEEnableDiv5 has been sent, to use a 12MHz base clock,
+// Set the dvi5 flag if MPSSEEnableDiv5 has been sent, to use a 12MHz base clock,
 // instead of 60MHz.
 func MPSSEDivValue(rate int, div5 bool) int {
 	clk := 60_000_000
