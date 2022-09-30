@@ -380,6 +380,45 @@ func Open(vendor, product int, description, serial string, index uint,
 	return d, nil
 }
 
+// OpenBusAddr opens the device at a given USB bus and device address. Uses
+// specified channel c.
+func OpenBusAddr(bus, address int, c Channel) (*Device, error) {
+	d, err := makeDevice(c)
+	if err != nil {
+		return nil, err
+	}
+	e := C.ftdi_usb_open_bus_addr(
+		d.ctx,
+		C.uint8_t(bus),
+		C.uint8_t(address),
+	)
+	if e < 0 {
+		defer d.free()
+		return nil, d.makeError(e)
+	}
+	runtime.SetFinalizer(d, (*Device).close)
+	return d, nil
+}
+
+// OpenString opens the ftdi-device described by a description-string. Uses
+// specified channel c.
+func OpenString(description string, c Channel) (*Device, error) {
+	d, err := makeDevice(c)
+	if err != nil {
+		return nil, err
+	}
+	e := C.ftdi_usb_open_string(
+		d.ctx,
+		C.CString(description),
+	)
+	if e < 0 {
+		defer d.free()
+		return nil, d.makeError(e)
+	}
+	runtime.SetFinalizer(d, (*Device).close)
+	return d, nil
+}
+
 // Mode represents operation mode that FTDI device can work.
 type Mode byte
 
