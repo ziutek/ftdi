@@ -4,7 +4,10 @@ package ftdi
 #include <ftdi.h>
 */
 import "C"
-import "fmt"
+import (
+	"fmt"
+	"unsafe"
+)
 
 func cbool(b bool) C.int {
 	if b {
@@ -442,6 +445,36 @@ func (e EEPROM) ChipSize() int {
 	var v C.int
 	C.ftdi_get_eeprom_value(e.d.ctx, C.CHIP_SIZE, &v)
 	return int(v)
+}
+
+func (e EEPROM) ManufacturerString() string {
+	var buf [128]C.char
+	C.ftdi_eeprom_get_strings(e.d.ctx, (*C.char)(unsafe.Pointer(&buf[0])), C.int(len(buf)), nil, 0, nil, 0)
+	return C.GoString((*C.char)(unsafe.Pointer(&buf[0])))
+}
+
+func (e EEPROM) SetManufacturerString(s string) {
+	C.ftdi_eeprom_set_strings(e.d.ctx, C.CString(s), nil, nil)
+}
+
+func (e EEPROM) ProductString() string {
+	var buf [128]C.char
+	C.ftdi_eeprom_get_strings(e.d.ctx, nil, 0, (*C.char)(unsafe.Pointer(&buf[0])), C.int(len(buf)), nil, 0)
+	return C.GoString((*C.char)(unsafe.Pointer(&buf[0])))
+}
+
+func (e EEPROM) SetProductString(s string) {
+	C.ftdi_eeprom_set_strings(e.d.ctx, nil, C.CString(s), nil)
+}
+
+func (e EEPROM) SerialString() string {
+	var buf [128]C.char
+	C.ftdi_eeprom_get_strings(e.d.ctx, nil, 0, nil, 0, (*C.char)(unsafe.Pointer(&buf[0])), C.int(len(buf)))
+	return C.GoString((*C.char)(unsafe.Pointer(&buf[0])))
+}
+
+func (e EEPROM) SetSerialString(s string) {
+	C.ftdi_eeprom_set_strings(e.d.ctx, nil, nil, C.CString(s))
 }
 
 func (e EEPROM) String() string {
